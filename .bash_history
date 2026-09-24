@@ -52,3 +52,6 @@ mkdir -p "$TARGET_DIR"
 echo "[*] Locating Zangi database files via root..."
 # Search the entire /data/data tree for any file or database belonging to zangi
 su -c "find /data/data -name '*zangi*' -o -name '*.db'" | while read -r item; do     echo "[+] Found: $item";     su -c "cp -r '$item' '$TARGET_DIR/'" 2>/dev/null || true; done
+cd contracts
+# Install Hardhat, OpenZeppelin contracts, and toolbox
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox

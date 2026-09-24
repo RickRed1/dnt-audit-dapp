@@ -1,2 +1,5 @@
 [user]
 	name = RickRed1
+	email = rickred1@users.noreply.github.com
+[credential]
+	helper = store
