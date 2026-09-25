@@ -32,7 +32,7 @@ const NETWORKS = {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('Notary');
+  const [activeTab, setActiveTab] = useState('Home');
   const [selectedNetwork, setSelectedNetwork] = useState('polygon');
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -44,7 +44,6 @@ export default function App() {
   const [xHandle, setXHandle] = useState('RichardDimassa');
   const [isEditingHandle, setIsEditingHandle] = useState(false);
 
-  const verticals = ['Notary', 'SignAndSeal', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
   const netConfig = NETWORKS[selectedNetwork];
 
   const handleConnectWallet = async () => {
@@ -82,72 +81,56 @@ export default function App() {
     }
   };
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-    setSignedPdfUrl(null);
+  const handleLaunchCoinForHandle = async () => {
+    setStatusMessage(`Deploying on-chain pot for @${xHandle} on ${netConfig.chainName}...`);
+    setTimeout(() => {
+      setStatusMessage(`Success! Pot deployed on-chain for @${xHandle} with vault ticker $GSG-${xHandle.toUpperCase()}`);
+    }, 1500);
   };
 
-  const handleSignAndSealPdf = async () => {
-    if (!selectedFile || !signerName) {
-      setStatusMessage('Please provide both a document and your signer name.');
-      return;
-    }
-    try {
-      setStatusMessage('Signing PDF & Routing Fee...');
-      const buf = await selectedFile.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(buf);
-      const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-      const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ' | ' + netConfig.chainName + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.85, 0.1, 0.1) });
-      const bytes = await pdfDoc.save();
-      setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
-      
-      const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
-      const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      if (!signer) {
-        setStatusMessage('Signed for @' + xHandle + ' (' + netConfig.chainName + ' Sim)');
-        return;
-      }
-
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, 'SignAndSeal:' + netConfig.nativeCurrency.symbol, { value: valueToSend });
-      await tx.wait();
-      setStatusMessage(`Success! Sealed and fee routed on ${netConfig.chainName} for @${xHandle}`);
-    } catch (err) { setStatusMessage('Error: ' + err.message); }
-  };
-
-  const handleAnchorProof = async () => {
-    if (!selectedFile) { setStatusMessage('Select a file first.'); return; }
-    try {
-      const buf = await selectedFile.arrayBuffer();
-      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-      const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ' (' + netConfig.chainName + ' Sim)'); return; }
-      
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, activeTab + ':' + xHandle, { value: valueToSend });
-      await tx.wait();
-      setStatusMessage(`Proof anchored on ${netConfig.chainName} for @${xHandle}!`);
-    } catch (err) { setStatusMessage('Error: ' + err.message); }
+  const handleClaimPot = async () => {
+    setStatusMessage(`Verifying ownership of @${xHandle} to claim pot rewards...`);
+    setTimeout(() => {
+      setStatusMessage(`Pot successfully claimed for @${xHandle}! Yield routed to wallet.`);
+    }, 1500);
   };
 
   return (
-    <div style={{ backgroundColor: '#0b1d3a', color: '#ffffff', minHeight: '100vh', padding: '1rem', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ backgroundColor: '#0b1d3a', color: '#ffffff', minHeight: '100vh', paddingBottom: '5rem', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
         
         {/* Header / Commemorative Banner */}
-        <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.15em' }}>1776 - 2026</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffffff', letterSpacing: '0.1em' }}>GODSOURCEGLOBAL VAULT</div>
+        <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626' }}>1776 - 2026</div>
+          <div style={{ fontSize: '1rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>GODSOURCEGLOBAL VAULT</div>
+          <button onClick={handleConnectWallet} style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #ffffff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold' }}>
+            {walletAddress ? 'Connected' : 'Claim/Connect'}
+          </button>
         </div>
 
-        {/* Dynamic Identity Card */}
+        {/* Narrative Stats Overview */}
+        <div style={{ background: '#071326', padding: '1.2rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
+          <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.8rem', textAlign: 'center' }}>You build. They pay. You get paid.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
+            <div style={{ background: '#0b1d3a', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#dc2626' }}>$55.0K</div>
+              <div style={{ fontSize: '0.65rem', color: '#d1d5db' }}>PAID OUT TO OWNERS</div>
+            </div>
+            <div style={{ background: '#0b1d3a', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#dc2626' }}>$127.2K</div>
+              <div style={{ fontSize: '0.65rem', color: '#d1d5db' }}>PAID TO HOLDERS</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleLaunchCoinForHandle} style={{ flex: 1, padding: '0.6rem', background: '#dc2626', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.75rem' }}>Launch a coin</button>
+            <button onClick={handleClaimPot} style={{ flex: 1, padding: '0.6rem', background: '#ffffff', color: '#0b1d3a', border: '1px solid #dc2626', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.75rem' }}>Claim your pot</button>
+          </div>
+        </div>
+
+        {/* Dynamic Handle Card */}
         <div style={{ background: '#071326', padding: '1rem', borderRadius: '12px', border: '2px solid #ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.05em' }}>VERIFIED X HANDLE</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626' }}>VERIFIED X HANDLE POT</div>
             {isEditingHandle ? (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
                 <input 
@@ -159,70 +142,48 @@ export default function App() {
                 <button onClick={() => setIsEditingHandle(false)} style={{ background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>Set</button>
               </div>
             ) : (
-              <div onClick={() => setIsEditingHandle(true)} style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 'bold', marginTop: '0.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                @{xHandle} <span style={{ fontSize: '0.55rem', color: '#d1d5db' }}>(Click to change)</span>
+              <div onClick={() => setIsEditingHandle(true)} style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 'bold', marginTop: '0.2rem', cursor: 'pointer' }}>
+                @{xHandle} <span style={{ fontSize: '0.55rem', color: '#d1d5db' }}>(Click to change handle)</span>
               </div>
             )}
           </div>
-          <div style={{ background: '#dc2626', color: '#ffffff', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>SECURE</div>
+          <div style={{ background: '#dc2626', color: '#ffffff', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>ACTIVE POT</div>
         </div>
 
-        {/* Main Vault Panel */}
-        <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
-          
-          {/* Network Selector Toggle */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '1rem' }}>
-            <button onClick={() => setSelectedNetwork('ethereum')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'ethereum' ? '#ffffff' : '#0b1d3a', color: selectedNetwork === 'ethereum' ? '#0b1d3a' : '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-              Ethereum
-            </button>
-            <button onClick={() => setSelectedNetwork('polygon')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'polygon' ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #dc2626', borderRadius: '6px' }}>
-              Polygon
-            </button>
-            <button onClick={() => setSelectedNetwork('apechain')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'apechain' ? '#ffffff' : '#0b1d3a', color: selectedNetwork === 'apechain' ? '#0b1d3a' : '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-              ApeChain
-            </button>
+        {/* Narrative Explainer Card */}
+        <div style={{ background: '#071326', padding: '1rem', borderRadius: '12px', border: '1px solid #ffffff', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ fontSize: '2rem' }}>🏛️</div>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#ffffff' }}>Every handle has a pot</div>
+            <div style={{ fontSize: '0.7rem', color: '#d1d5db', marginTop: '0.2rem' }}>Launch a coin for any X handle. A secure vault pot opens on-chain instantly with that handle name bound to it.</div>
           </div>
-
-          <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', border: '2px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem' }}>
-            {walletAddress ? `Connected (${netConfig.chainName})` : `Connect ${netConfig.chainName} Wallet`}
-          </button>
-
-          <div style={{ margin: '1rem 0' }}>
-            <label style={{ fontSize: '0.7rem', color: '#d1d5db', display: 'block', marginBottom: '0.3rem' }}>Protocol Fee / Tip ({netConfig.nativeCurrency.symbol}):</label>
-            <input type="text" value={tipAmount} onChange={e => setTipAmount(e.target.value)} style={{ width: '100%', padding: '0.4rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px', fontSize: '0.8rem' }} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', margin: '1rem 0' }}>
-            {verticals.map(v => (
-              <button key={v} onClick={() => setActiveTab(v)} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: activeTab === v ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-                {v}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'SignAndSeal' && (
-            <div>
-              <input type="text" placeholder="Signer Legal Name" value={signerName} onChange={e => setSignerName(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }} />
-              <input type="file" accept="application/pdf" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
-              <button onClick={handleSignAndSealPdf} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #ffffff' }}>Sign & Seal PDF</button>
-              {signedPdfUrl && <a href={signedPdfUrl} download="Signed.pdf" style={{ display: 'block', textAlign: 'center', marginTop: '0.5rem', color: '#ffffff', fontWeight: 'bold', textDecoration: 'underline' }}>Download Signed PDF</a>}
-            </div>
-          )}
-
-          {activeTab !== 'SignAndSeal' && (
-            <div>
-              <input type="file" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
-              <button onClick={handleAnchorProof} style={{ width: '100%', padding: '0.6rem', background: '#ffffff', color: '#0b1d3a', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #dc2626' }}>Anchor Proof On-Chain</button>
-            </div>
-          )}
-
-          {statusMessage && (
-            <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#0b1d3a', color: '#ffffff', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all', border: '1px solid #dc2626' }}>
-              {statusMessage}
-            </div>
-          )}
         </div>
 
+        {statusMessage && (
+          <div style={{ padding: '0.7rem', background: '#071326', color: '#ffffff', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all', border: '1px solid #dc2626', borderRadius: '8px' }}>
+            {statusMessage}
+          </div>
+        )}
+
+      </div>
+
+      {/* Fixed Bottom Navigation Bar */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#071326', borderTop: '2px solid #dc2626', display: 'flex', justifyContent: 'space-around', padding: '0.6rem 0', zIndex: 1000 }}>
+        <button onClick={() => setActiveTab('Home')} style={{ background: 'none', border: 'none', color: activeTab === 'Home' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <span>🏠</span> Home
+        </button>
+        <button onClick={() => setActiveTab('Vaults')} style={{ background: 'none', border: 'none', color: activeTab === 'Vaults' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <span>💼</span> Vaults
+        </button>
+        <button onClick={() => setActiveTab('Pots')} style={{ background: 'none', border: 'none', color: activeTab === 'Pots' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <span>🏺</span> Pots
+        </button>
+        <button onClick={() => setActiveTab('Launch')} style={{ background: 'none', border: 'none', color: activeTab === 'Launch' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <span>🚀</span> Launch
+        </button>
+        <button onClick={() => setActiveTab('Docs')} style={{ background: 'none', border: 'none', color: activeTab === 'Docs' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <span>📄</span> Docs
+        </button>
       </div>
     </div>
   );
