@@ -165,7 +165,7 @@ export default function App() {
             <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>The GODSOURCEGLOBAL Vault Protocol bridges verifiable digital identities with on-chain cryptographic anchoring, automated document notarization, and tokenized yield distribution under the model: <b>You build. They pay. You get paid.</b></p>
 
             <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>2. X-Handle Pots</h3>
-            <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Every verified $\mathbb{X}$ handle can launch a coin and open a secure on-chain pot. Protocol tips and reflective yields accumulate automatically in these vaults.</p>
+            <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Every verified X handle can launch a coin and open a secure on-chain pot. Protocol tips and reflective yields accumulate automatically in these vaults.</p>
 
             <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>3. Operational Verticals</h3>
             <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Supports <b>Notary</b>, <b>SignAndSeal</b>, <b>Taxes</b>, <b>Insurance</b>, <b>BailBonds</b>, and <b>XHandleCoin</b> with immutable SHA-256 proof verification.</p>
