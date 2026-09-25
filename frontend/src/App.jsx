@@ -7,7 +7,7 @@ const CONTRACT_ABI = [
   "function anchorProof(bytes32 proofHash, string memory vertical) external"
 ];
 
-export default function App() {
+export default async function App() {
   const [activeTab, setActiveTab] = useState('Notary');
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
