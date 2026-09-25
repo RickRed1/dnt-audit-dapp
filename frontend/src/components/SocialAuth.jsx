@@ -4,23 +4,23 @@ export default function SocialAuth({ onAuthenticate }) {
   const [handle, setHandle] = useState(null);
 
   const handleTwitterLogin = () => {
-    const mockHandle = "@RichardDimassa"; // Updated with your name from logo
+    const mockHandle = "@RichardDimassa";
     setHandle(mockHandle);
     onAuthenticate(mockHandle);
   };
 
   return (
-    <div className="p-4 bg-[#0a1029] border border-[#1d4ed8]/50 rounded-xl text-[#e5e7eb] shadow-2xl shadow-[#1d4ed8]/20">
-      <h3 className="text-lg font-semibold mb-2 text-[#fbbf24]">Handle & Wallet Identity</h3>
+    <div style={{ padding: '1rem', backgroundColor: '#0a1029', border: '1px solid rgba(29, 78, 216, 0.5)', borderRadius: '0.75rem', color: '#e5e7eb', boxShadow: '0 10px 25px rgba(29, 78, 216, 0.2)' }}>
+      <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', color: '#fbbf24', marginTop: 0 }}>Handle & Wallet Identity</h3>
       {handle ? (
-        <div className="flex items-center justify-between">
-          <span className="text-[#22d3ee] font-mono">Linked: {handle}</span>
-          <span className="text-xs text-[#0a1029] bg-[#22d3ee] px-2 py-1 rounded">Verified</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: '#22d3ee', fontFamily: 'monospace' }}>Linked: {handle}</span>
+          <span style={{ fontSize: '0.75rem', color: '#0a1029', backgroundColor: '#22d3ee', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 'bold' }}>Verified</span>
         </div>
       ) : (
         <button 
           onClick={handleTwitterLogin}
-          className="w-full py-2 bg-[#111827] hover:bg-[#1d4ed8]/20 border border-[#fbbf24] rounded-lg font-medium transition text-[#fbbf24]"
+          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#111827', border: '1px solid #fbbf24', borderRadius: '0.5rem', fontWeight: '500', color: '#fbbf24', cursor: 'pointer' }}
         >
           Sign in with X to Link Handle
         </button>
