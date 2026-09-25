@@ -19,7 +19,6 @@ export default function App() {
       return;
     }
     setStatusMessage(`Anchoring ${selectedFile.name} under [${activeTab}] for ${socialHandle || 'Anonymous'}...`);
-    // Simulated anchor hook logic
   };
 
   return (
@@ -32,27 +31,24 @@ export default function App() {
           </button>
         </header>
 
-        {/* X / Twitter Social Auth Component */}
         <SocialAuth onAuthenticate={(handle) => setSocialHandle(handle)} />
 
-        {/* Service Vertical Selection Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
           {verticals.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={\`py-2.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition \${
+              className={`py-2.5 px-3 rounded-lg text-xs font-semibold tracking-wide transition ${
                 activeTab === tab 
                   ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' 
                   : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white'
-              }\`}
+              }`}
             >
               {tab.replace(/([A-Z])/g, ' $1').trim()}
             </button>
           ))}
         </div>
 
-        {/* Active Vertical Panel */}
         <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl">
           <h2 className="text-lg font-semibold mb-2 capitalize">{activeTab} Anchoring Protocol</h2>
           <p className="text-xs text-zinc-400 mb-6">
