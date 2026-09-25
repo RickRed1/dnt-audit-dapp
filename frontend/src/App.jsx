@@ -7,7 +7,7 @@ const CONTRACT_ABI = [
   "function anchorProof(bytes32 proofHash, string memory vertical) external"
 ];
 
-export default async function App() {
+export default function App() {
   const [activeTab, setActiveTab] = useState('Notary');
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -42,6 +42,7 @@ export default async function App() {
   };
 
   const handleSignAndSealPdf = async () => {
+    if (!selectedFile || !signerName) {
       setStatusMessage('Please provide both a document and your signer name.');
       return;
     }
@@ -59,6 +60,7 @@ export default async function App() {
       const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
       
+      if (!signer) {
         setStatusMessage('Signed successfully (Simulation Hash: ' + hashHex.substring(0, 18) + '...)');
         return;
       }
@@ -70,10 +72,12 @@ export default async function App() {
   };
 
   const handleAnchorProof = async () => {
+    if (!selectedFile) { setStatusMessage('Select a file first.'); return; }
     try {
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      if (!signer) { setStatusMessage('Proof Hash: ' + hashHex.substring(0, 18) + '... (Simulated)'); return; }
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.anchorProof(hashHex, activeTab);
       await tx.wait();
