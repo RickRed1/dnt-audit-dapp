@@ -1,30 +1,21 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import SocialAuth from './components/SocialAuth';
 
 const CONTRACT_ADDRESS = "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074";
 const CONTRACT_ABI = [
-  "function anchorProof(bytes32 proofHash, string memory vertical) external",
-  "function launchCoin(string memory handle) external payable",
-  "function claimPot(string memory handle) external"
+  "function anchorProof(bytes32 proofHash, string memory vertical) external"
 ];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Notary');
-  const [socialHandle, setSocialHandle] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [walletAddress, setWalletAddress] = useState(null);
-  const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [signerName, setSignerName] = useState('');
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
-  const [targetHandle, setTargetHandle] = useState('');
-  const [launchedCoins, setLaunchedCoins] = useState([
-    { handle: '@RichardDimassa', pot: '1,450 POL', status: 'Claimable' },
-    { handle: '@GSG_Architect', pot: '820 POL', status: 'Accumulating' }
-  ]);
+
   const verticals = ['Notary', 'SignAndSeal', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
 
   const handleConnectWallet = async () => {
@@ -35,7 +26,8 @@ export default function App() {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const s = await p.getSigner();
         const addr = await s.getAddress();
-        setProvider(p); setSigner(s); setWalletAddress(addr);
+        setSigner(s);
+        setWalletAddress(addr);
         setStatusMessage('Connected: ' + addr.substring(0, 6) + '...' + addr.substring(addr.length - 4));
       } catch (err) { setStatusMessage('Error: ' + err.message); }
     } else {
@@ -44,7 +36,10 @@ export default function App() {
     }
   };
 
-  const handleFileChange = (e) => { setSelectedFile(e.target.files[0]); setSignedPdfUrl(null); };
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
+    setSignedPdfUrl(null);
+  };
 
   const handleSignAndSealPdf = async () => {
       setStatusMessage('Please provide both a document and your signer name.');
