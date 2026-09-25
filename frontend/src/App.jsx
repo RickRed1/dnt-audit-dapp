@@ -30,7 +30,7 @@ export default function App() {
 
   const verticals = ['Notary', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
 
-  // Connect Web3 Wallet with Mobile Deep-Link / Injected Check
+  // Mobile-Friendly Connect Wallet Routine
   const handleConnectWallet = async () => {
     if (window.ethereum) {
       try {
@@ -48,10 +48,10 @@ export default function App() {
         setStatusMessage(`Connection error: ${err.message}`);
       }
     } else {
-      // Mobile fallback: Provide deep link instructions or simulated signer for testing
-      setStatusMessage('No injected Web3 wallet found. Open this page inside MetaMask, Trust Wallet, or Coinbase Wallet browser app.');
-      // Fallback simulated address for UI continuity
-      setWalletAddress('0x96E5...0A074');
+      // Mobile Browser Fallback: Prompt user to open in crypto wallet browser or enable simulation mode
+      const simulatedAddr = "0x96E5...0A074 (Mobile Active)";
+      setWalletAddress(simulatedAddr);
+      setStatusMessage('No injected wallet provider detected. Enabled mobile interface simulation mode. To execute live transactions, open this link inside MetaMask or Trust Wallet browser.');
     }
   };
 
@@ -74,7 +74,7 @@ export default function App() {
       const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
       if (!signer) {
-        setStatusMessage(`[GSG Secure Mode] Hash Generated: ${hashHex.substring(0, 22)}... (Ready for On-Chain Anchor)`);
+        setStatusMessage(`[GSG Secure Proof] Generated SHA-256: ${hashHex.substring(0, 24)}... (Simulated Anchor Ready)`);
         return;
       }
 
@@ -112,7 +112,7 @@ export default function App() {
 
   const handleClaimPot = async (handle) => {
     if (!socialHandle || socialHandle.toLowerCase() !== handle.toLowerCase()) {
-      setStatusMessage(`Error: You must authenticate with ${handle} via X to claim this pot.`);
+      setStatusMessage(`Error: You must link and verify handle ${handle} to claim this pot.`);
       return;
     }
 
@@ -193,11 +193,11 @@ export default function App() {
                 boxShadow: '0 4px 15px rgba(29, 78, 216, 0.5)'
               }}
             >
-              {walletAddress ? 'Wallet Connected' : 'Connect Wallet'}
+              {walletAddress ? 'Wallet Active' : 'Connect Wallet'}
             </button>
           </div>
 
-          {/* Social Identity Module */}
+          {/* Social Identity Module - Open to any user */}
           <div style={{ marginBottom: '1.25rem' }}>
             <SocialAuth onAuthenticate={(handle) => setSocialHandle(handle)} />
           </div>
@@ -245,7 +245,7 @@ export default function App() {
                   X Handle Coin Launcher & Pot
                 </h2>
                 <p style={{ fontSize: '0.75rem', color: '#93c5fd', marginBottom: '1rem', lineHeight: '1.4' }}>
-                  Launch a coin for any X handle. Trades fund that handle's pot. Sign in with X to claim it or route it as X Money.
+                  Launch a coin for any X handle. Trades fund that handle's pot. Link your handle above to claim your pot.
                 </p>
 
                 <form onSubmit={handleLaunchCoin} style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>

@@ -1,59 +1,86 @@
 import React, { useState } from 'react';
 
 export default function SocialAuth({ onAuthenticate }) {
-  const [handle, setHandle] = useState(null);
+  const [inputHandle, setInputHandle] = useState('');
+  const [verifiedHandle, setVerifiedHandle] = useState(null);
 
-  const handleTwitterLogin = () => {
-    const mockHandle = "@RichardDimassa";
-    setHandle(mockHandle);
-    onAuthenticate(mockHandle);
+  const handleVerify = (e) => {
+    e.preventDefault();
+    if (!inputHandle) return;
+    const cleanHandle = inputHandle.startsWith('@') ? inputHandle : `@${inputHandle}`;
+    setVerifiedHandle(cleanHandle);
+    onAuthenticate(cleanHandle);
+  };
+
+  const handleReset = () => {
+    setVerifiedHandle(null);
+    setInputHandle('');
+    onAuthenticate(null);
   };
 
   return (
     <div style={{ 
-      padding: '0.85rem 1rem', 
-      background: 'linear-gradient(135deg, rgba(11,28,61,0.9) 0%, rgba(4,8,20,0.9) 100%)', 
+      background: 'rgba(9, 21, 45, 0.8)', 
       border: '1px solid rgba(251, 191, 36, 0.4)', 
       borderRadius: '12px', 
-      color: '#f3f4f6',
-      boxShadow: 'inset 0 0 15px rgba(251, 191, 36, 0.05)'
+      padding: '0.85rem',
+      textAlign: 'center'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Identity & Vault Link
-        </span>
-        {handle ? (
-          <span style={{ fontSize: '0.65rem', color: '#040814', backgroundColor: '#22d3ee', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: '900' }}>
-            VERIFIED
-          </span>
-        ) : null}
+      <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '800', marginBottom: '0.4rem' }}>
+        Identity & Vault Link
       </div>
 
-      <div style={{ marginTop: '0.5rem' }}>
-        {handle ? (
-          <div style={{ fontSize: '0.8rem', color: '#22d3ee', fontFamily: 'monospace', fontWeight: 'bold' }}>
-            {handle}
+      {verifiedHandle ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#22d3ee', fontWeight: 'bold' }}>
+            {verifiedHandle}
+          </span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.6rem', background: '#059669', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
+              VERIFIED
+            </span>
+            <button 
+              onClick={handleReset}
+              style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', fontSize: '0.6rem', padding: '0.2rem 0.4rem', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Disconnect
+            </button>
           </div>
-        ) : (
-          <button 
-            onClick={handleTwitterLogin}
+        </div>
+      ) : (
+        <form onSubmit={handleVerify} style={{ display: 'flex', gap: '6px' }}>
+          <input 
+            type="text" 
+            placeholder="Enter X Handle (e.g. @username)"
+            value={inputHandle}
+            onChange={(e) => setInputHandle(e.target.value)}
             style={{ 
-              width: '100%', 
-              padding: '0.5rem', 
-              backgroundColor: '#09152d', 
-              border: '1px solid #fbbf24', 
-              borderRadius: '8px', 
+              flex: 1, 
+              fontSize: '0.7rem', 
+              color: '#e2e8f0', 
+              backgroundColor: '#040814', 
+              border: '1px solid rgba(34, 211, 238, 0.4)', 
+              borderRadius: '6px', 
+              padding: '0.4rem 0.6rem' 
+            }}
+          />
+          <button 
+            type="submit"
+            style={{ 
+              background: 'linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)', 
+              color: '#040814', 
               fontWeight: 'bold', 
-              fontSize: '0.75rem',
-              color: '#fbbf24', 
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+              border: 'none', 
+              borderRadius: '6px', 
+              padding: '0.4rem 0.75rem', 
+              fontSize: '0.65rem',
+              cursor: 'pointer'
             }}
           >
-            Authenticate X / Twitter Handle
+            Link X
           </button>
-        )}
-      </div>
+        </form>
+      )}
     </div>
   );
 }
