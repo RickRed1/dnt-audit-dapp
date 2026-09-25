@@ -7,44 +7,62 @@ const CONTRACT_ABI = [
   "function anchorProof(bytes32 proofHash, string memory vertical) external payable"
 ];
 
-const APECHAIN_PARAMS = {
-  chainId: '0x8173',
-  chainName: 'ApeChain',
-  nativeCurrency: { name: 'APE', symbol: 'APE', decimals: 18 },
-  rpcUrls: ['https://rpc.apechain.com/http'],
-  blockExplorerUrls: ['https://apescan.io']
+const NETWORKS = {
+  ethereum: {
+    chainId: '0x1', // 1
+    chainName: 'Ethereum Mainnet',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://cloudflare-eth.com'],
+    blockExplorerUrls: ['https://etherscan.io']
+  },
+  polygon: {
+    chainId: '0x89', // 137
+    chainName: 'Polygon Mainnet',
+    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    rpcUrls: ['https://polygon-rpc.com/'],
+    blockExplorerUrls: ['https://polygonscan.com']
+  },
+  apechain: {
+    chainId: '0x8173', // 33139
+    chainName: 'ApeChain',
+    nativeCurrency: { name: 'APE', symbol: 'APE', decimals: 18 },
+    rpcUrls: ['https://rpc.apechain.com/http'],
+    blockExplorerUrls: ['https://apescan.io']
+  }
 };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Notary');
+  const [selectedNetwork, setSelectedNetwork] = useState('ethereum');
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [walletAddress, setWalletAddress] = useState(null);
   const [signer, setSigner] = useState(null);
   const [signerName, setSignerName] = useState('');
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
-  const [tipAmount, setTipAmount] = useState('0.01');
+  const [tipAmount, setTipAmount] = useState('0.005');
   const [xHandle, setXHandle] = useState('RichardDimassa');
   const [isEditingHandle, setIsEditingHandle] = useState(false);
 
   const verticals = ['Notary', 'SignAndSeal', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
+  const netConfig = NETWORKS[selectedNetwork];
 
   const handleConnectWallet = async () => {
     if (window.ethereum) {
       try {
-        setStatusMessage('Requesting ApeChain connection...');
+        setStatusMessage(`Requesting ${netConfig.chainName} connection...`);
         const p = new ethers.BrowserProvider(window.ethereum);
         
         try {
           await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: APECHAIN_PARAMS.chainId }],
+            params: [{ chainId: netConfig.chainId }],
           });
         } catch (switchError) {
           if (switchError.code === 4902) {
             await window.ethereum.request({
               method: 'wallet_addEthereumChain',
-              params: [APECHAIN_PARAMS],
+              params: [netConfig],
             });
           } else {
             throw switchError;
@@ -56,11 +74,11 @@ export default function App() {
         const addr = await s.getAddress();
         setSigner(s);
         setWalletAddress(addr);
-        setStatusMessage('Connected: ' + addr.substring(0, 6) + '...' + addr.substring(addr.length - 4));
+        setStatusMessage(`Connected (${netConfig.chainName}): ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`);
       } catch (err) { setStatusMessage('Error: ' + err.message); }
     } else {
       setWalletAddress('0x96E5...0A074');
-      setStatusMessage('Simulation mode active.');
+      setStatusMessage(`Simulation mode active on ${netConfig.chainName}.`);
     }
   };
 
@@ -80,7 +98,7 @@ export default function App() {
       const pdfDoc = await PDFDocument.load(buf);
       const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
+      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ' | ' + netConfig.chainName + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
       const bytes = await pdfDoc.save();
       setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
       
@@ -88,15 +106,15 @@ export default function App() {
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
       
       if (!signer) {
-        setStatusMessage('Signed for @' + xHandle + ' (Simulated)');
+        setStatusMessage('Signed for @' + xHandle + ' (' + netConfig.chainName + ' Sim)');
         return;
       }
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, 'SignAndSeal', { value: valueToSend });
+      const tx = await contract.anchorProof(hashHex, 'SignAndSeal:' + netConfig.nativeCurrency.symbol, { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Success! Sealed and tip routed for @' + xHandle);
+      setStatusMessage(`Success! Sealed and tip routed on ${netConfig.chainName} for @${xHandle}`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -106,13 +124,13 @@ export default function App() {
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ' (Simulated)'); return; }
+      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ' (' + netConfig.chainName + ' Sim)'); return; }
       
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const valueToSend = ethers.parseEther(tipAmount || '0');
       const tx = await contract.anchorProof(hashHex, activeTab + ':' + xHandle, { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Proof anchored for @' + xHandle + '!');
+      setStatusMessage(`Proof anchored on ${netConfig.chainName} for @${xHandle}!`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -147,12 +165,25 @@ export default function App() {
         <div style={{ background: '#09152d', padding: '1.5rem', borderRadius: '16px', border: '1px solid #22d3ee' }}>
           <h1 style={{ fontSize: '1rem', color: '#fbbf24', textAlign: 'center', marginBottom: '1rem' }}>GODSOURCEGLOBAL LLC VAULT</h1>
           
-          <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.5rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
-            {walletAddress ? 'Connected to ApeChain' : 'Connect ApeChain Wallet'}
+          {/* Multi-Chain Selector Toggle */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '1rem' }}>
+            <button onClick={() => setSelectedNetwork('ethereum')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'ethereum' ? '#627eea' : '#040814', color: selectedNetwork === 'ethereum' ? '#fff' : '#627eea', border: '1px solid #627eea', borderRadius: '6px' }}>
+              Ethereum
+            </button>
+            <button onClick={() => setSelectedNetwork('polygon')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'polygon' ? '#8247e5' : '#040814', color: selectedNetwork === 'polygon' ? '#fff' : '#8247e5', border: '1px solid #8247e5', borderRadius: '6px' }}>
+              Polygon
+            </button>
+            <button onClick={() => setSelectedNetwork('apechain')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'apechain' ? '#fbbf24' : '#040814', color: selectedNetwork === 'apechain' ? '#040814' : '#fbbf24', border: '1px solid #fbbf24', borderRadius: '6px' }}>
+              ApeChain
+            </button>
+          </div>
+
+          <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.5rem', background: selectedNetwork === 'ethereum' ? '#627eea' : selectedNetwork === 'polygon' ? '#8247e5' : '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+            {walletAddress ? `Connected to ${netConfig.chainName}` : `Connect ${netConfig.chainName} Wallet`}
           </button>
 
           <div style={{ margin: '1rem 0' }}>
-            <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem' }}>Protocol Tip / Fee (APE):</label>
+            <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem' }}>Protocol Tip / Fee ({netConfig.nativeCurrency.symbol}):</label>
             <input type="text" value={tipAmount} onChange={e => setTipAmount(e.target.value)} style={{ width: '100%', padding: '0.4rem', background: '#040814', color: '#fff', border: '1px solid #22d3ee', borderRadius: '6px', fontSize: '0.8rem' }} />
           </div>
 
