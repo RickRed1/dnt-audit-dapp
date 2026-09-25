@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
+import { ethers } from 'ethers';
 import SocialAuth from './components/SocialAuth';
+
+// Deployed GSG Protocol Vault Contract Address & Minimal ABI
+const CONTRACT_ADDRESS = "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074";
+const CONTRACT_ABI = [
+  "function anchorProof(bytes32 proofHash, string memory vertical) external",
+  "function launchCoin(string memory handle) external payable",
+  "function claimPot(string memory handle) external"
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Notary');
@@ -7,7 +16,12 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   
-  // State for X Handle Coin Launcher
+  // Wallet & Blockchain State
+  const [walletAddress, setWalletAddress] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+
+  // X Handle Coin Launcher State
   const [targetHandle, setTargetHandle] = useState('');
   const [launchedCoins, setLaunchedCoins] = useState([
     { handle: '@RichardDimassa', pot: '1,450 POL', status: 'Claimable by Owner' },
@@ -16,33 +30,99 @@ export default function App() {
 
   const verticals = ['Notary', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
 
+  // Connect Web3 Wallet via Ethers.js
+  const handleConnectWallet = async () => {
+    if (window.ethereum) {
+      try {
+        setStatusMessage('Requesting wallet connection...');
+        const web3Provider = new ethers.BrowserProvider(window.ethereum);
+        const web3Signer = await web3Provider.getSigner();
+        const address = await web3Signer.getAddress();
+        
+        setProvider(web3Provider);
+        setSigner(web3Signer);
+        setWalletAddress(address);
+        setStatusMessage(`Connected: ${address.substring(0, 6)}...${address.substring(address.length - 4)}`);
+      } catch (err) {
+        setStatusMessage(`Connection rejected: ${err.message}`);
+      }
+    } else {
+      setStatusMessage('No Web3 provider detected. Open inside a mobile crypto wallet browser.');
+    }
+  };
+
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
 
-  const handleAnchorProof = () => {
+  // Generate SHA-256 Hash of File and Submit to Contract
+  const handleAnchorProof = async () => {
     if (!selectedFile) {
       setStatusMessage('Please select a compliance record first.');
       return;
     }
-    setStatusMessage(`Anchoring cryptographic proof for ${selectedFile.name} under [${activeTab}] via GODSOURCEGLOBAL LLC...`);
+    
+    try {
+      setStatusMessage(`Reading and hashing ${selectedFile.name} locally...`);
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (!signer) {
+        setStatusMessage(`Simulated [${activeTab}] Hash Generated: ${hashHex.substring(0, 18)}... (Connect Wallet to Anchor On-Chain)`);
+        return;
+      }
+
+      setStatusMessage(`Submitting proof hash to contract on Polygon via GODSOURCEGLOBAL LLC...`);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const tx = await contract.anchorProof(hashHex, activeTab);
+      setStatusMessage(`Transaction sent! Hash: ${tx.hash}. Waiting for confirmation...`);
+      
+      await tx.wait();
+      setStatusMessage(`Success! Document proof securely anchored on-chain for [${activeTab}].`);
+    } catch (err) {
+      setStatusMessage(`Error anchoring proof: ${err.reason || err.message}`);
+    }
   };
 
-  const handleLaunchCoin = (e) => {
+  const handleLaunchCoin = async (e) => {
     e.preventDefault();
     if (!targetHandle) return;
     const formattedHandle = targetHandle.startsWith('@') ? targetHandle : `@${targetHandle}`;
-    setLaunchedCoins([{ handle: formattedHandle, pot: '100 POL', status: 'Active Trading' }, ...launchedCoins]);
-    setStatusMessage(`Successfully launched coin for ${formattedHandle}. Trading fees routing to pot.`);
-    setTargetHandle('');
+
+    try {
+      if (signer) {
+        setStatusMessage(`Launching coin for ${formattedHandle} on-chain...`);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const tx = await contract.launchCoin(formattedHandle, { value: ethers.parseEther("0.01") });
+        await tx.wait();
+      }
+      setLaunchedCoins([{ handle: formattedHandle, pot: '0.01 POL', status: 'Active Trading' }, ...launchedCoins]);
+      setStatusMessage(`Successfully launched coin for ${formattedHandle}. Trading fees routing to pot.`);
+      setTargetHandle('');
+    } catch (err) {
+      setStatusMessage(`Error launching coin: ${err.reason || err.message}`);
+    }
   };
 
-  const handleClaimPot = (handle) => {
+  const handleClaimPot = async (handle) => {
     if (!socialHandle || socialHandle.toLowerCase() !== handle.toLowerCase()) {
-      setStatusMessage(`Error: You must sign in with ${handle} to claim this pot.`);
+      setStatusMessage(`Error: You must authenticate with ${handle} via X to claim this pot.`);
       return;
     }
-    setStatusMessage(`Success! Pot for ${handle} claimed and routed as X Money to your verified wallet.`);
+
+    try {
+      if (signer) {
+        setStatusMessage(`Submitting claim for ${handle} pot...`);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const tx = await contract.claimPot(handle);
+        await tx.wait();
+      }
+      setStatusMessage(`Success! Pot for ${handle} claimed and routed as X Money to your wallet.`);
+    } catch (err) {
+      setStatusMessage(`Error claiming pot: ${err.reason || err.message}`);
+    }
   };
 
   return (
@@ -91,22 +171,25 @@ export default function App() {
               DECENTRALIZED NOTARY & <span style={{ color: '#22d3ee' }}>X-MONEY VAULT</span>
             </h1>
             <div style={{ fontSize: '10px', color: '#93c5fd', fontFamily: 'monospace', letterSpacing: '1px' }}>
-              0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074
+              {walletAddress ? `${walletAddress.substring(0,6)}...${walletAddress.substring(38)}` : CONTRACT_ADDRESS}
             </div>
 
-            <button style={{ 
-              marginTop: '0.85rem',
-              background: 'linear-gradient(135deg, #1d4ed8, #2563eb)', 
-              color: '#ffffff', 
-              padding: '0.45rem 1.15rem', 
-              borderRadius: '8px', 
-              fontSize: '0.75rem',
-              fontWeight: 'bold', 
-              border: '1px solid #22d3ee', 
-              cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(29, 78, 216, 0.5)'
-            }}>
-              Connect Wallet
+            <button 
+              onClick={handleConnectWallet}
+              style={{ 
+                marginTop: '0.85rem',
+                background: walletAddress ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #1d4ed8, #2563eb)', 
+                color: '#ffffff', 
+                padding: '0.45rem 1.15rem', 
+                borderRadius: '8px', 
+                fontSize: '0.75rem',
+                fontWeight: 'bold', 
+                border: '1px solid #22d3ee', 
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(29, 78, 216, 0.5)'
+              }}
+            >
+              {walletAddress ? 'Wallet Connected' : 'Connect Wallet'}
             </button>
           </div>
 
@@ -161,7 +244,6 @@ export default function App() {
                   Launch a coin for any X handle. Trades fund that handle's pot. Sign in with X to claim it or route it as X Money.
                 </p>
 
-                {/* Launch Form */}
                 <form onSubmit={handleLaunchCoin} style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
                   <input 
                     type="text" 
@@ -195,7 +277,6 @@ export default function App() {
                   </button>
                 </form>
 
-                {/* Active Pots List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {launchedCoins.map((item, idx) => (
                     <div key={idx} style={{ 
