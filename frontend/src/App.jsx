@@ -10,27 +10,9 @@ const CONTRACT_ABI = [
 ];
 
 const NETWORKS = {
-  ethereum: {
-    chainId: '0x1',
-    chainName: 'Ethereum Mainnet',
-    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-    rpcUrls: ['https://cloudflare-eth.com'],
-    blockExplorerUrls: ['https://etherscan.io']
-  },
-  polygon: {
-    chainId: '0x89',
-    chainName: 'Polygon Mainnet',
-    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-    rpcUrls: ['https://polygon-rpc.com/'],
-    blockExplorerUrls: ['https://polygonscan.com']
-  },
-  apechain: {
-    chainId: '0x8173',
-    chainName: 'ApeChain',
-    nativeCurrency: { name: 'APE', symbol: 'APE', decimals: 18 },
-    rpcUrls: ['https://rpc.apechain.com/http'],
-    blockExplorerUrls: ['https://apescan.io']
-  }
+  ethereum: { chainId: '0x1', chainName: 'Ethereum Mainnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: ['https://cloudflare-eth.com'], blockExplorerUrls: ['https://etherscan.io'] },
+  polygon: { chainId: '0x89', chainName: 'Polygon Mainnet', nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 }, rpcUrls: ['https://polygon-rpc.com/'], blockExplorerUrls: ['https://polygonscan.com'] },
+  apechain: { chainId: '0x8173', chainName: 'ApeChain', nativeCurrency: { name: 'APE', symbol: 'APE', decimals: 18 }, rpcUrls: ['https://rpc.apechain.com/http'], blockExplorerUrls: ['https://apescan.io'] }
 };
 
 export default function App() {
@@ -54,16 +36,13 @@ export default function App() {
       try {
         setStatusMessage(`Requesting ${netConfig.chainName} connection...`);
         const p = new ethers.BrowserProvider(window.ethereum);
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: netConfig.chainId }] }).catch(async (switchError) => {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [netConfig] });
-          } else { throw switchError; }
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: netConfig.chainId }] }).catch(async (err) => {
+          if (err.code === 4902) { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [netConfig] }); } else { throw err; }
         });
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const s = await p.getSigner();
         const addr = await s.getAddress();
-        setSigner(s);
-        setWalletAddress(addr);
+        setSigner(s); setWalletAddress(addr);
         setStatusMessage(`Connected: ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`);
       } catch (err) { setStatusMessage('Error: ' + err.message); }
     } else {
@@ -72,91 +51,89 @@ export default function App() {
     }
   };
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-    setSignedPdfUrl(null);
-  };
+  const handleFileChange = (e) => { setSelectedFile(e.target.files[0]); setSignedPdfUrl(null); };
 
   const handleSignAndSealPdf = async () => {
-    if (!selectedFile || !signerName) {
-      setStatusMessage('Please provide both a document and your signer name.');
-      return;
-    }
+    if (!selectedFile || !signerName) { setStatusMessage('Provide both document and signer name.'); return; }
     try {
       setStatusMessage('Signing PDF & Routing Fee...');
       const buf = await selectedFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(buf);
       const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-      const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.85, 0.1, 0.1) });
+      pdfDoc.getPages()[pdfDoc.getPages().length - 1].drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.85, 0.1, 0.1) });
       const bytes = await pdfDoc.save();
       setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
-      
       const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      if (!signer) { setStatusMessage('Signed successfully (Simulation mode)'); return; }
-
+      if (!signer) { setStatusMessage('Signed successfully (Simulation)'); return; }
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.anchorProof(hashHex, 'SignAndSeal', { value: ethers.parseEther(tipAmount || '0') });
       await tx.wait();
-      setStatusMessage(`Success! Sealed and anchored on-chain for @${xHandle}`);
+      setStatusMessage(`Success! Sealed & anchored for @${xHandle}`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleAnchorProof = async () => {
     if (!selectedFile) { setStatusMessage('Select a file first.'); return; }
     try {
-      setStatusMessage(`Anchoring ${activeTab} proof on-chain...`);
+      setStatusMessage(`Anchoring ${activeTab} proof...`);
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      if (!signer) { setStatusMessage(`Proof Hash for @${xHandle} anchored in simulation.`); return; }
-      
+      if (!signer) { setStatusMessage(`Proof Hash anchored in simulation.`); return; }
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.anchorProof(hashHex, activeTab, { value: ethers.parseEther(tipAmount || '0') });
       await tx.wait();
-      setStatusMessage(`${activeTab} proof successfully anchored on-chain!`);
+      setStatusMessage(`${activeTab} proof anchored on-chain!`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleLaunchCoinForHandle = async () => {
     try {
-      setStatusMessage(`Launching coin pot for @${xHandle} on-chain...`);
+      setStatusMessage(`Launching coin pot for @${xHandle}...`);
       if (!signer) { setStatusMessage(`Simulated coin pot deployed for @${xHandle}!`); return; }
-
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.launchHandleCoin(xHandle, { value: ethers.parseEther(tipAmount || '0') });
       await tx.wait();
-      setStatusMessage(`Success! Coin pot deployed on-chain for @${xHandle}`);
+      setStatusMessage(`Coin pot deployed for @${xHandle}`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleClaimPot = async () => {
     try {
       setStatusMessage(`Claiming pot rewards for @${xHandle}...`);
-      if (!signer) { setStatusMessage(`Simulated pot rewards claimed for @${xHandle}!`); return; }
-
+      if (!signer) { setStatusMessage(`Simulated pot rewards claimed!`); return; }
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const tx = await contract.claimPot(xHandle);
       await tx.wait();
-      setStatusMessage(`Success! Pot rewards claimed for @${xHandle}`);
+      setStatusMessage(`Pot rewards claimed for @${xHandle}`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   return (
     <div style={{ backgroundColor: '#0b1d3a', color: '#ffffff', minHeight: '100vh', paddingBottom: '6rem', fontFamily: 'sans-serif' }}>
+      <style>{`
+        @keyframes waveEffect {
+          0% { transform: perspective(400px) rotateY(0deg) skewX(0deg); filter: brightness(1); }
+          25% { transform: perspective(400px) rotateY(6deg) skewX(2deg); filter: brightness(1.05); }
+          50% { transform: perspective(400px) rotateY(0deg) skewX(0deg); filter: brightness(1); }
+          75% { transform: perspective(400px) rotateY(-6deg) skewX(-2deg); filter: brightness(0.95); }
+          100% { transform: perspective(400px) rotateY(0deg) skewX(0deg); filter: brightness(1); }
+        }
+        .waving-flag { animation: waveEffect 3.5s ease-in-out infinite; transform-origin: left center; }
+      `}</style>
+
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
         
-        {/* Header */}
-        <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.15em' }}>1776 - 2026</div>
+        <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="waving-flag" style={{ width: '120px', height: '75px', borderRadius: '6px', overflow: 'hidden', border: '2px solid #dc2626', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)' }}>
+            <img src="/assets/flag.jpg" alt="USA Flag" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.15em' }}>1776 - 2026 SOVEREIGN FRAMEWORK</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffffff', letterSpacing: '0.1em' }}>GODSOURCEGLOBAL VAULT</div>
         </div>
 
         {activeTab === 'Docs' ? (
-          /* Whitepaper / Docs View */
           <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626', lineHeight: '1.5' }}>
             <h2 style={{ color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>GODSOURCEGLOBAL VAULT WHITEPAPER</h2>
             <div style={{ fontSize: '0.7rem', color: '#d1d5db', marginBottom: '1rem' }}>Framework Version: 1776-2026 Sovereign Edition</div>
@@ -174,7 +151,6 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Narrative Stats & Coin Action Panel */}
             <div style={{ background: '#071326', padding: '1rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.6rem', textAlign: 'center' }}>You build. They pay. You get paid.</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', textAlign: 'center', marginBottom: '0.8rem' }}>
@@ -193,7 +169,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* X Handle Card */}
             <div style={{ background: '#071326', padding: '1rem', borderRadius: '12px', border: '2px solid #ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626' }}>VERIFIED X HANDLE</div>
@@ -211,7 +186,6 @@ export default function App() {
               <div style={{ background: '#dc2626', color: '#ffffff', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>SECURE</div>
             </div>
 
-            {/* Main Vault Interactive Panel */}
             <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '1rem' }}>
@@ -274,7 +248,6 @@ export default function App() {
 
       </div>
 
-      {/* Bottom Navigation Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#071326', borderTop: '2px solid #dc2626', display: 'flex', justifyContent: 'space-around', padding: '0.6rem 0', zIndex: 1000 }}>
         <button onClick={() => setActiveTab('Notary')} style={{ background: 'none', border: 'none', color: activeTab === 'Notary' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>🏠</span> Home</button>
         <button onClick={() => setActiveTab('Vaults')} style={{ background: 'none', border: 'none', color: activeTab === 'Vaults' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>💼</span> Vaults</button>
