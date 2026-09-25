@@ -17,6 +17,8 @@ const NETWORKS = {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Notary');
+  const [claimView, setClaimView] = useState(false);
+  const [xSignedIn, setXSignedIn] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState('polygon');
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
