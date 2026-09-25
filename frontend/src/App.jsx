@@ -3,13 +3,12 @@ import { ethers } from 'ethers';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const CONTRACT_ADDRESS = "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074";
-const TREASURY_WALLET = "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074";
 const CONTRACT_ABI = [
   "function anchorProof(bytes32 proofHash, string memory vertical) external payable"
 ];
 
 const APECHAIN_PARAMS = {
-  chainId: '0x8173', // 33139
+  chainId: '0x8173',
   chainName: 'ApeChain',
   nativeCurrency: { name: 'APE', symbol: 'APE', decimals: 18 },
   rpcUrls: ['https://rpc.apechain.com/http'],
@@ -57,11 +56,11 @@ export default function App() {
         const addr = await s.getAddress();
         setSigner(s);
         setWalletAddress(addr);
-        setStatusMessage('Connected (ApeChain): ' + addr.substring(0, 6) + '...' + addr.substring(addr.length - 4));
+        setStatusMessage('Connected: ' + addr.substring(0, 6) + '...' + addr.substring(addr.length - 4));
       } catch (err) { setStatusMessage('Error: ' + err.message); }
     } else {
-      setWalletAddress('0x96E5...0A074 (Simulation)');
-      setStatusMessage('Simulation mode active on ApeChain.');
+      setWalletAddress('0x96E5...0A074');
+      setStatusMessage('Simulation mode active.');
     }
   };
 
@@ -76,13 +75,12 @@ export default function App() {
       return;
     }
     try {
-      setStatusMessage('Signing PDF & Routing Fee to Vault...');
+      setStatusMessage('Signing PDF & Routing Fee...');
       const buf = await selectedFile.arrayBuffer();
       const pdfDoc = await PDFDocument.load(buf);
       const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('DIGITALLY SIGNED & SEALED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
-      page.drawText('GODSOURCEGLOBAL LLC | ' + new Date().toUTCString(), { x: 50, y: 45, size: 8, font, color: rgb(0.13, 0.55, 0.75) });
+      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
       const bytes = await pdfDoc.save();
       setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
       
@@ -90,7 +88,7 @@ export default function App() {
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
       
       if (!signer) {
-        setStatusMessage('Signed successfully for @' + xHandle + ' (Simulation Hash: ' + hashHex.substring(0, 18) + '...)');
+        setStatusMessage('Signed for @' + xHandle + ' (Simulated)');
         return;
       }
 
@@ -98,7 +96,7 @@ export default function App() {
       const valueToSend = ethers.parseEther(tipAmount || '0');
       const tx = await contract.anchorProof(hashHex, 'SignAndSeal', { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Success! Sealed, anchored on ApeChain for @' + xHandle + ', and tip routed.');
+      setStatusMessage('Success! Sealed and tip routed for @' + xHandle);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -108,13 +106,13 @@ export default function App() {
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ': ' + hashHex.substring(0, 18) + '... (Simulated)'); return; }
+      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ' (Simulated)'); return; }
       
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const valueToSend = ethers.parseEther(tipAmount || '0');
       const tx = await contract.anchorProof(hashHex, activeTab + ':' + xHandle, { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Proof anchored successfully on ApeChain for @' + xHandle + '!');
+      setStatusMessage('Proof anchored for @' + xHandle + '!');
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -147,14 +145,14 @@ export default function App() {
 
         {/* Main Vault Panel */}
         <div style={{ background: '#09152d', padding: '1.5rem', borderRadius: '16px', border: '1px solid #22d3ee' }}>
-          <h1 style={{ fontSize: '1rem', color: '#fbbf24', textAlign: 'center', marginBottom: '1rem' }}>GODSOURCEGLOBAL LLC VAULT (APECHAIN)</h1>
+          <h1 style={{ fontSize: '1rem', color: '#fbbf24', textAlign: 'center', marginBottom: '1rem' }}>GODSOURCEGLOBAL LLC VAULT</h1>
           
           <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.5rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
             {walletAddress ? 'Connected to ApeChain' : 'Connect ApeChain Wallet'}
           </button>
 
           <div style={{ margin: '1rem 0' }}>
-            <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem' }}>Protocol Tip / Fee (APE to 0x96E5...0A074):</label>
+            <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem' }}>Protocol Tip / Fee (APE):</label>
             <input type="text" value={tipAmount} onChange={e => setTipAmount(e.target.value)} style={{ width: '100%', padding: '0.4rem', background: '#040814', color: '#fff', border: '1px solid #22d3ee', borderRadius: '6px', fontSize: '0.8rem' }} />
           </div>
 
@@ -182,7 +180,11 @@ export default function App() {
             </div>
           )}
 
-          {statusMessage && <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#040814', color: '#22d3ee', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all'}>{statusMessage}</div>}
+          {statusMessage && (
+            <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#040814', color: '#22d3ee', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              {statusMessage}
+            </div>
+          )}
         </div>
 
       </div>
