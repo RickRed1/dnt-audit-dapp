@@ -4,7 +4,9 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const CONTRACT_ADDRESS = "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074";
 const CONTRACT_ABI = [
-  "function anchorProof(bytes32 proofHash, string memory vertical) external payable"
+  "function anchorProof(bytes32 proofHash, string memory vertical) external payable",
+  "function launchHandleCoin(string memory xHandle) external payable",
+  "function claimPot(string memory xHandle) external"
 ];
 
 const NETWORKS = {
@@ -52,29 +54,17 @@ export default function App() {
       try {
         setStatusMessage(`Requesting ${netConfig.chainName} connection...`);
         const p = new ethers.BrowserProvider(window.ethereum);
-        
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: netConfig.chainId }],
-          });
-        } catch (switchError) {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: netConfig.chainId }] }).catch(async (switchError) => {
           if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [netConfig],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-
+            await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [netConfig] });
+          } else { throw switchError; }
+        });
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         const s = await p.getSigner();
         const addr = await s.getAddress();
         setSigner(s);
         setWalletAddress(addr);
-        setStatusMessage(`Connected (${netConfig.chainName}): ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`);
+        setStatusMessage(`Connected: ${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`);
       } catch (err) { setStatusMessage('Error: ' + err.message); }
     } else {
       setWalletAddress('0x96E5...0A074');
@@ -98,183 +88,199 @@ export default function App() {
       const pdfDoc = await PDFDocument.load(buf);
       const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ' | ' + netConfig.chainName + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.85, 0.1, 0.1) });
+      page.drawText('SIGNED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.85, 0.1, 0.1) });
       const bytes = await pdfDoc.save();
       setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
       
       const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
       
-      if (!signer) {
-        setStatusMessage('Signed for @' + xHandle + ' (' + netConfig.chainName + ' Sim)');
-        return;
-      }
+      if (!signer) { setStatusMessage('Signed successfully (Simulation mode)'); return; }
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, 'SignAndSeal:' + netConfig.nativeCurrency.symbol, { value: valueToSend });
+      const tx = await contract.anchorProof(hashHex, 'SignAndSeal', { value: ethers.parseEther(tipAmount || '0') });
       await tx.wait();
-      setStatusMessage(`Success! Sealed and fee routed on ${netConfig.chainName} for @${xHandle}`);
+      setStatusMessage(`Success! Sealed and anchored on-chain for @${xHandle}`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleAnchorProof = async () => {
     if (!selectedFile) { setStatusMessage('Select a file first.'); return; }
     try {
+      setStatusMessage(`Anchoring ${activeTab} proof on-chain...`);
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ' (' + netConfig.chainName + ' Sim)'); return; }
+      
+      if (!signer) { setStatusMessage(`Proof Hash for @${xHandle} anchored in simulation.`); return; }
       
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, activeTab + ':' + xHandle, { value: valueToSend });
+      const tx = await contract.anchorProof(hashHex, activeTab, { value: ethers.parseEther(tipAmount || '0') });
       await tx.wait();
-      setStatusMessage(`Proof anchored on ${netConfig.chainName} for @${xHandle}!`);
+      setStatusMessage(`${activeTab} proof successfully anchored on-chain!`);
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleLaunchCoinForHandle = async () => {
-    setStatusMessage(`Deploying on-chain pot for @${xHandle} on ${netConfig.chainName}...`);
-    setTimeout(() => {
-      setStatusMessage(`Success! Pot deployed on-chain for @${xHandle} with vault ticker $GSG-${xHandle.toUpperCase()}`);
-    }, 1500);
+    try {
+      setStatusMessage(`Launching coin pot for @${xHandle} on-chain...`);
+      if (!signer) { setStatusMessage(`Simulated coin pot deployed for @${xHandle}!`); return; }
+
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const tx = await contract.launchHandleCoin(xHandle, { value: ethers.parseEther(tipAmount || '0') });
+      await tx.wait();
+      setStatusMessage(`Success! Coin pot deployed on-chain for @${xHandle}`);
+    } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   const handleClaimPot = async () => {
-    setStatusMessage(`Verifying ownership of @${xHandle} to claim pot rewards...`);
-    setTimeout(() => {
-      setStatusMessage(`Pot successfully claimed for @${xHandle}! Yield routed to wallet.`);
-    }, 1500);
+    try {
+      setStatusMessage(`Claiming pot rewards for @${xHandle}...`);
+      if (!signer) { setStatusMessage(`Simulated pot rewards claimed for @${xHandle}!`); return; }
+
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const tx = await contract.claimPot(xHandle);
+      await tx.wait();
+      setStatusMessage(`Success! Pot rewards claimed for @${xHandle}`);
+    } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
   return (
     <div style={{ backgroundColor: '#0b1d3a', color: '#ffffff', minHeight: '100vh', paddingBottom: '6rem', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
         
-        {/* Header / Commemorative Banner */}
+        {/* Header */}
         <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.15em' }}>1776 - 2026</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffffff', letterSpacing: '0.1em' }}>GODSOURCEGLOBAL VAULT</div>
         </div>
 
-        {/* Narrative Stats Overview */}
-        <div style={{ background: '#071326', padding: '1rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.6rem', textAlign: 'center' }}>You build. They pay. You get paid.</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', textAlign: 'center', marginBottom: '0.8rem' }}>
-            <div style={{ background: '#0b1d3a', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#dc2626' }}>$55.0K</div>
-              <div style={{ fontSize: '0.6rem', color: '#d1d5db' }}>PAID OUT TO OWNERS</div>
-            </div>
-            <div style={{ background: '#0b1d3a', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#dc2626' }}>$127.2K</div>
-              <div style={{ fontSize: '0.6rem', color: '#d1d5db' }}>PAID TO HOLDERS</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={handleLaunchCoinForHandle} style={{ flex: 1, padding: '0.5rem', background: '#dc2626', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.7rem' }}>Launch a coin</button>
-            <button onClick={handleClaimPot} style={{ flex: 1, padding: '0.5rem', background: '#ffffff', color: '#0b1d3a', border: '1px solid #dc2626', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.7rem' }}>Claim your pot</button>
-          </div>
-        </div>
+        {activeTab === 'Docs' ? (
+          /* Whitepaper / Docs View */
+          <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626', lineHeight: '1.5' }}>
+            <h2 style={{ color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>GODSOURCEGLOBAL VAULT WHITEPAPER</h2>
+            <div style={{ fontSize: '0.7rem', color: '#d1d5db', marginBottom: '1rem' }}>Framework Version: 1776-2026 Sovereign Edition</div>
+            
+            <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>1. Executive Summary</h3>
+            <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>The GODSOURCEGLOBAL Vault Protocol bridges verifiable digital identities with on-chain cryptographic anchoring, automated document notarization, and tokenized yield distribution under the model: <b>You build. They pay. You get paid.</b></p>
 
-        {/* Dynamic Identity Card */}
-        <div style={{ background: '#071326', padding: '1rem', borderRadius: '12px', border: '2px solid #ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.05em' }}>VERIFIED X HANDLE</div>
-            {isEditingHandle ? (
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
-                <input 
-                  type="text" 
-                  value={xHandle} 
-                  onChange={e => setXHandle(e.target.value.replace('@',''))} 
-                  style={{ background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '4px', padding: '0.2rem 0.4rem', fontSize: '0.8rem', width: '120px' }} 
-                />
-                <button onClick={() => setIsEditingHandle(false)} style={{ background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>Set</button>
+            <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>2. X-Handle Pots</h3>
+            <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Every verified $\mathbb{X}$ handle can launch a coin and open a secure on-chain pot. Protocol tips and reflective yields accumulate automatically in these vaults.</p>
+
+            <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>3. Operational Verticals</h3>
+            <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Supports <b>Notary</b>, <b>SignAndSeal</b>, <b>Taxes</b>, <b>Insurance</b>, <b>BailBonds</b>, and <b>XHandleCoin</b> with immutable SHA-256 proof verification.</p>
+
+            <button onClick={() => setActiveTab('Notary')} style={{ width: '100%', marginTop: '1.5rem', padding: '0.6rem', background: '#dc2626', color: '#ffffff', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #ffffff', cursor: 'pointer' }}>Back to Vault Interface</button>
+          </div>
+        ) : (
+          <>
+            {/* Narrative Stats & Coin Action Panel */}
+            <div style={{ background: '#071326', padding: '1rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.6rem', textAlign: 'center' }}>You build. They pay. You get paid.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', textAlign: 'center', marginBottom: '0.8rem' }}>
+                <div style={{ background: '#0b1d3a', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#dc2626' }}>$55.0K</div>
+                  <div style={{ fontSize: '0.6rem', color: '#d1d5db' }}>PAID OUT TO OWNERS</div>
+                </div>
+                <div style={{ background: '#0b1d3a', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ffffff' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#dc2626' }}>$127.2K</div>
+                  <div style={{ fontSize: '0.6rem', color: '#d1d5db' }}>PAID TO HOLDERS</div>
+                </div>
               </div>
-            ) : (
-              <div onClick={() => setIsEditingHandle(true)} style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 'bold', marginTop: '0.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                @{xHandle} <span style={{ fontSize: '0.55rem', color: '#d1d5db' }}>(Click to change)</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={handleLaunchCoinForHandle} style={{ flex: 1, padding: '0.5rem', background: '#dc2626', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.7rem', cursor: 'pointer' }}>Launch a coin</button>
+                <button onClick={handleClaimPot} style={{ flex: 1, padding: '0.5rem', background: '#ffffff', color: '#0b1d3a', border: '1px solid #dc2626', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.7rem', cursor: 'pointer' }}>Claim your pot</button>
               </div>
-            )}
-          </div>
-          <div style={{ background: '#dc2626', color: '#ffffff', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>SECURE</div>
-        </div>
+            </div>
 
-        {/* Main Vault Panel */}
-        <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
-          
-          {/* Network Selector Toggle */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '1rem' }}>
-            <button onClick={() => setSelectedNetwork('ethereum')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'ethereum' ? '#ffffff' : '#0b1d3a', color: selectedNetwork === 'ethereum' ? '#0b1d3a' : '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-              Ethereum
-            </button>
-            <button onClick={() => setSelectedNetwork('polygon')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'polygon' ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #dc2626', borderRadius: '6px' }}>
-              Polygon
-            </button>
-            <button onClick={() => setSelectedNetwork('apechain')} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === 'apechain' ? '#ffffff' : '#0b1d3a', color: selectedNetwork === 'apechain' ? '#0b1d3a' : '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-              ApeChain
-            </button>
-          </div>
+            {/* X Handle Card */}
+            <div style={{ background: '#071326', padding: '1rem', borderRadius: '12px', border: '2px solid #ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#dc2626' }}>VERIFIED X HANDLE</div>
+                {isEditingHandle ? (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
+                    <input type="text" value={xHandle} onChange={e => setXHandle(e.target.value.replace('@',''))} style={{ background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '4px', padding: '0.2rem 0.4rem', fontSize: '0.8rem', width: '120px' }} />
+                    <button onClick={() => setIsEditingHandle(false)} style={{ background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>Set</button>
+                  </div>
+                ) : (
+                  <div onClick={() => setIsEditingHandle(true)} style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 'bold', marginTop: '0.2rem', cursor: 'pointer' }}>
+                    @{xHandle} <span style={{ fontSize: '0.55rem', color: '#d1d5db' }}>(Click to change)</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ background: '#dc2626', color: '#ffffff', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>SECURE</div>
+            </div>
 
-          <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', border: '2px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            {walletAddress ? `Connected (${netConfig.chainName})` : `Connect ${netConfig.chainName} Wallet`}
-          </button>
+            {/* Main Vault Interactive Panel */}
+            <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '1rem' }}>
+                {['ethereum', 'polygon', 'apechain'].map(net => (
+                  <button key={net} onClick={() => setSelectedNetwork(net)} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: selectedNetwork === net ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px', cursor: 'pointer' }}>
+                    {net.toUpperCase()}
+                  </button>
+                ))}
+              </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ fontSize: '0.7rem', color: '#d1d5db', display: 'block', marginBottom: '0.3rem' }}>Protocol Fee / Tip ({netConfig.nativeCurrency.symbol}):</label>
-            <input type="text" value={tipAmount} onChange={e => setTipAmount(e.target.value)} style={{ width: '100%', padding: '0.4rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px', fontSize: '0.8rem' }} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '1rem' }}>
-            {verticals.map(v => (
-              <button key={v} onClick={() => setActiveTab(v)} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: activeTab === v ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }}>
-                {v}
+              <button onClick={handleConnectWallet} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', border: '2px solid #ffffff', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '1rem', cursor: 'pointer' }}>
+                {walletAddress ? `Connected (${netConfig.chainName})` : `Connect ${netConfig.chainName} Wallet`}
               </button>
-            ))}
-          </div>
 
-          {activeTab === 'SignAndSeal' && (
-            <div>
-              <input type="text" placeholder="Signer Legal Name" value={signerName} onChange={e => setSignerName(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }} />
-              <input type="file" accept="application/pdf" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
-              <button onClick={handleSignAndSealPdf} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #ffffff' }}>Sign & Seal PDF</button>
-              {signedPdfUrl && <a href={signedPdfUrl} download="Signed.pdf" style={{ display: 'block', textAlign: 'center', marginTop: '0.5rem', color: '#ffffff', fontWeight: 'bold', textDecoration: 'underline' }}>Download Signed PDF</a>}
-            </div>
-          )}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.7rem', color: '#d1d5db', display: 'block', marginBottom: '0.3rem' }}>Protocol Fee / Tip ({netConfig.nativeCurrency.symbol}):</label>
+                <input type="text" value={tipAmount} onChange={e => setTipAmount(e.target.value)} style={{ width: '100%', padding: '0.4rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px', fontSize: '0.8rem' }} />
+              </div>
 
-          {activeTab !== 'SignAndSeal' && (
-            <div>
-              <input type="file" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
-              <button onClick={handleAnchorProof} style={{ width: '100%', padding: '0.6rem', background: '#ffffff', color: '#0b1d3a', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #dc2626' }}>Anchor Proof On-Chain</button>
-            </div>
-          )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '1rem' }}>
+                {verticals.map(v => (
+                  <button key={v} onClick={() => setActiveTab(v)} style={{ padding: '0.4rem', fontSize: '0.65rem', fontWeight: 'bold', background: activeTab === v ? '#dc2626' : '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px', cursor: 'pointer' }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
 
-          {statusMessage && (
-            <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#0b1d3a', color: '#ffffff', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all', border: '1px solid #dc2626' }}>
-              {statusMessage}
+              {activeTab === 'SignAndSeal' && (
+                <div>
+                  <input type="text" placeholder="Signer Legal Name" value={signerName} onChange={e => setSignerName(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', background: '#0b1d3a', color: '#ffffff', border: '1px solid #ffffff', borderRadius: '6px' }} />
+                  <input type="file" accept="application/pdf" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
+                  <button onClick={handleSignAndSealPdf} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #ffffff', cursor: 'pointer' }}>Sign & Seal PDF</button>
+                  {signedPdfUrl && <a href={signedPdfUrl} download="Signed.pdf" style={{ display: 'block', textAlign: 'center', marginTop: '0.5rem', color: '#ffffff', fontWeight: 'bold', textDecoration: 'underline' }}>Download Signed PDF</a>}
+                </div>
+              )}
+
+              {activeTab === 'XHandleCoin' && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#d1d5db', marginBottom: '0.5rem' }}>Deploy or manage the dedicated coin pot for @{xHandle}</div>
+                  <button onClick={handleLaunchCoinForHandle} style={{ width: '100%', padding: '0.6rem', background: '#dc2626', color: '#ffffff', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #ffffff', cursor: 'pointer', marginBottom: '0.5rem' }}>Launch Pot Coin ($GSG-{xHandle.toUpperCase()})</button>
+                  <button onClick={handleClaimPot} style={{ width: '100%', padding: '0.6rem', background: '#ffffff', color: '#0b1d3a', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #dc2626', cursor: 'pointer' }}>Claim Pot Yield</button>
+                </div>
+              )}
+
+              {activeTab !== 'SignAndSeal' && activeTab !== 'XHandleCoin' && (
+                <div>
+                  <input type="file" onChange={handleFileChange} style={{ width: '100%', marginBottom: '0.5rem', color: '#ffffff', fontSize: '0.8rem' }} />
+                  <button onClick={handleAnchorProof} style={{ width: '100%', padding: '0.6rem', background: '#ffffff', color: '#0b1d3a', fontWeight: 'bold', borderRadius: '6px', border: '2px solid #dc2626', cursor: 'pointer' }}>Anchor {activeTab} Proof On-Chain</button>
+                </div>
+              )}
+
+              {statusMessage && (
+                <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#0b1d3a', color: '#ffffff', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all', border: '1px solid #dc2626' }}>
+                  {statusMessage}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
       </div>
 
-      {/* Fixed Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#071326', borderTop: '2px solid #dc2626', display: 'flex', justifyContent: 'space-around', padding: '0.6rem 0', zIndex: 1000 }}>
-        <button onClick={() => setActiveTab('Notary')} style={{ background: 'none', border: 'none', color: activeTab === 'Notary' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <span>🏠</span> Home
-        </button>
-        <button onClick={() => setActiveTab('Vaults')} style={{ background: 'none', border: 'none', color: activeTab === 'Vaults' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <span>💼</span> Vaults
-        </button>
-        <button onClick={() => setActiveTab('XHandleCoin')} style={{ background: 'none', border: 'none', color: activeTab === 'XHandleCoin' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <span>🏺</span> Pots
-        </button>
-        <button onClick={() => setActiveTab('SignAndSeal')} style={{ background: 'none', border: 'none', color: activeTab === 'SignAndSeal' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <span>🚀</span> Launch
-        </button>
-        <button onClick={() => setActiveTab('Docs')} style={{ background: 'none', border: 'none', color: activeTab === 'Docs' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <span>📄</span> Docs
-        </button>
+        <button onClick={() => setActiveTab('Notary')} style={{ background: 'none', border: 'none', color: activeTab === 'Notary' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>🏠</span> Home</button>
+        <button onClick={() => setActiveTab('Vaults')} style={{ background: 'none', border: 'none', color: activeTab === 'Vaults' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>💼</span> Vaults</button>
+        <button onClick={() => setActiveTab('XHandleCoin')} style={{ background: 'none', border: 'none', color: activeTab === 'XHandleCoin' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>🏺</span> Pots</button>
+        <button onClick={() => setActiveTab('SignAndSeal')} style={{ background: 'none', border: 'none', color: activeTab === 'SignAndSeal' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>🚀</span> Launch</button>
+        <button onClick={() => setActiveTab('Docs')} style={{ background: 'none', border: 'none', color: activeTab === 'Docs' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>📄</span> Docs</button>
       </div>
     </div>
   );
