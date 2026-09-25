@@ -10,21 +10,50 @@ export default function SocialAuth({ onAuthenticate }) {
   };
 
   return (
-    <div style={{ padding: '1rem', backgroundColor: '#0a1029', border: '1px solid rgba(29, 78, 216, 0.5)', borderRadius: '0.75rem', color: '#e5e7eb', boxShadow: '0 10px 25px rgba(29, 78, 216, 0.2)' }}>
-      <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem', color: '#fbbf24', marginTop: 0 }}>Handle & Wallet Identity</h3>
-      {handle ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: '#22d3ee', fontFamily: 'monospace' }}>Linked: {handle}</span>
-          <span style={{ fontSize: '0.75rem', color: '#0a1029', backgroundColor: '#22d3ee', padding: '0.25rem 0.5rem', borderRadius: '0.25rem', fontWeight: 'bold' }}>Verified</span>
-        </div>
-      ) : (
-        <button 
-          onClick={handleTwitterLogin}
-          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#111827', border: '1px solid #fbbf24', borderRadius: '0.5rem', fontWeight: '500', color: '#fbbf24', cursor: 'pointer' }}
-        >
-          Sign in with X to Link Handle
-        </button>
-      )}
+    <div style={{ 
+      padding: '0.85rem 1rem', 
+      background: 'linear-gradient(135deg, rgba(24,24,27,0.9) 0%, rgba(9,9,11,0.9) 100%)', 
+      border: '1px solid rgba(192, 132, 252, 0.3)', 
+      borderRadius: '12px', 
+      color: '#e4e4e7',
+      boxShadow: 'inset 0 0 10px rgba(192, 132, 252, 0.05)'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Identity Vault Link
+        </span>
+        {handle ? (
+          <span style={{ fontSize: '0.65rem', color: '#05030a', backgroundColor: '#22d3ee', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: '900' }}>
+            VERIFIED
+          </span>
+        ) : null}
+      </div>
+
+      <div style={{ marginTop: '0.5rem' }}>
+        {handle ? (
+          <div style={{ fontSize: '0.8rem', color: '#22d3ee', fontFamily: 'monospace', fontWeight: 'bold' }}>
+            {handle}
+          </div>
+        ) : (
+          <button 
+            onClick={handleTwitterLogin}
+            style={{ 
+              width: '100%', 
+              padding: '0.5rem', 
+              backgroundColor: '#18181b', 
+              border: '1px solid rgba(255,255,255,0.2)', 
+              borderRadius: '8px', 
+              fontWeight: 'bold', 
+              fontSize: '0.75rem',
+              color: '#f43f5e', 
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+            }}
+          >
+            Authenticate X / Twitter Handle
+          </button>
+        )}
+      </div>
     </div>
   );
 }
