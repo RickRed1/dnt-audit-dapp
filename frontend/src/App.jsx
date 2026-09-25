@@ -6,8 +6,15 @@ export default function App() {
   const [socialHandle, setSocialHandle] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  
+  // State for X Handle Coin Launcher
+  const [targetHandle, setTargetHandle] = useState('');
+  const [launchedCoins, setLaunchedCoins] = useState([
+    { handle: '@RichardDimassa', pot: '1,450 POL', status: 'Claimable by Owner' },
+    { handle: '@GSG_Architect', pot: '820 POL', status: 'Accumulating' }
+  ]);
 
-  const verticals = ['Notary', 'Taxes', 'Insurance', 'BailBonds'];
+  const verticals = ['Notary', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -21,6 +28,23 @@ export default function App() {
     setStatusMessage(`Anchoring cryptographic proof for ${selectedFile.name} under [${activeTab}] via GODSOURCEGLOBAL LLC...`);
   };
 
+  const handleLaunchCoin = (e) => {
+    e.preventDefault();
+    if (!targetHandle) return;
+    const formattedHandle = targetHandle.startsWith('@') ? targetHandle : `@${targetHandle}`;
+    setLaunchedCoins([{ handle: formattedHandle, pot: '100 POL', status: 'Active Trading' }, ...launchedCoins]);
+    setStatusMessage(`Successfully launched coin for ${formattedHandle}. Trading fees routing to pot.`);
+    setTargetHandle('');
+  };
+
+  const handleClaimPot = (handle) => {
+    if (!socialHandle || socialHandle.toLowerCase() !== handle.toLowerCase()) {
+      setStatusMessage(`Error: You must sign in with ${handle} to claim this pot.`);
+      return;
+    }
+    setStatusMessage(`Success! Pot for ${handle} claimed and routed as X Money to your verified wallet.`);
+  };
+
   return (
     <div style={{ 
       backgroundColor: '#040814', 
@@ -32,7 +56,7 @@ export default function App() {
     }}>
       {/* Outer Polished Gold & Royal Blue Metallic Slab Frame */}
       <div style={{ 
-        maxWidth: '620px', 
+        maxWidth: '640px', 
         margin: '0 auto', 
         background: 'linear-gradient(135deg, #fbbf24 0%, #1e3a8a 30%, #09152d 70%, #fbbf24 100%)',
         padding: '5px', 
@@ -50,50 +74,31 @@ export default function App() {
           overflow: 'hidden'
         }}>
           
-          {/* Header with Emblem & Title */}
+          {/* Header */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             textAlign: 'center',
-            marginBottom: '1.5rem',
+            marginBottom: '1.25rem',
             borderBottom: '2px solid rgba(251, 191, 36, 0.2)',
-            paddingBottom: '1.25rem'
+            paddingBottom: '1rem'
           }}>
-            <div style={{ 
-              width: '110px', 
-              height: '110px', 
-              borderRadius: '50%', 
-              border: '3px solid #fbbf24', 
-              boxShadow: '0 0 25px rgba(34, 211, 238, 0.4), inset 0 0 15px rgba(251, 191, 36, 0.5)',
-              overflow: 'hidden',
-              marginBottom: '0.85rem',
-              backgroundColor: '#020617'
-            }}>
-              {/* Note: Ensure your emblem image is placed in public/emblem.png or referenced via URL */}
-              <img 
-                src="emblem.png" 
-                alt="GODSOURCEGLOBAL Emblem" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e)=>{e.target.style.display='none';}}
-              />
-            </div>
-
             <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '3px', color: '#fbbf24', fontWeight: '800' }}>
               GODSOURCEGLOBAL LLC
             </div>
-            <h1 style={{ fontSize: '1.35rem', fontWeight: '900', color: '#ffffff', margin: '4px 0 2px 0', textShadow: '0 2px 10px rgba(34,211,238,0.3)' }}>
-              DECENTRALIZED NOTARY & <span style={{ color: '#22d3ee' }}>AUDIT VAULT</span>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#ffffff', margin: '4px 0 2px 0', textShadow: '0 2px 10px rgba(34,211,238,0.3)' }}>
+              DECENTRALIZED NOTARY & <span style={{ color: '#22d3ee' }}>X-MONEY VAULT</span>
             </h1>
-            <div style={{ fontSize: '11px', color: '#93c5fd', fontFamily: 'monospace', letterSpacing: '1px' }}>
+            <div style={{ fontSize: '10px', color: '#93c5fd', fontFamily: 'monospace', letterSpacing: '1px' }}>
               0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074
             </div>
 
             <button style={{ 
-              marginTop: '1rem',
+              marginTop: '0.85rem',
               background: 'linear-gradient(135deg, #1d4ed8, #2563eb)', 
               color: '#ffffff', 
-              padding: '0.5rem 1.25rem', 
+              padding: '0.45rem 1.15rem', 
               borderRadius: '8px', 
               fontSize: '0.75rem',
               fontWeight: 'bold', 
@@ -110,30 +115,30 @@ export default function App() {
             <SocialAuth onAuthenticate={(handle) => setSocialHandle(handle)} />
           </div>
 
-          {/* Multi-Vertical Selector Tabs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '1.5rem' }}>
+          {/* Multi-Vertical & X Handle Selector Tabs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '1.25rem' }}>
             {verticals.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={{
-                  padding: '0.65rem 0.25rem',
-                  borderRadius: '10px',
-                  fontSize: '0.7rem',
+                  padding: '0.55rem 0.15rem',
+                  borderRadius: '8px',
+                  fontSize: '0.6rem',
                   fontWeight: '800',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
+                  letterSpacing: '0.2px',
                   cursor: 'pointer',
                   background: activeTab === tab 
                     ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' 
                     : '#09152d',
                   color: activeTab === tab ? '#040814' : '#22d3ee',
                   border: activeTab === tab ? '1px solid #fde047' : '1px solid rgba(34, 211, 238, 0.4)',
-                  boxShadow: activeTab === tab ? '0 0 15px rgba(251, 191, 36, 0.6)' : 'none',
+                  boxShadow: activeTab === tab ? '0 0 12px rgba(251, 191, 36, 0.6)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
-                {tab.replace(/([A-Z])/g, ' $1').trim()}
+                {tab === 'XHandleCoin' ? 'X Coin' : tab.replace(/([A-Z])/g, ' $1').trim()}
               </button>
             ))}
           </div>
@@ -146,63 +151,142 @@ export default function App() {
             padding: '1.25rem', 
             boxShadow: 'inset 0 0 20px rgba(34, 211, 238, 0.08), 0 10px 30px rgba(0,0,0,0.6)' 
           }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#22d3ee', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>{activeTab}</span> <span style={{ color: '#ffffff', fontWeight: '300' }}>Protocol Core</span>
-            </h2>
-            <p style={{ fontSize: '0.8rem', color: '#93c5fd', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-              Generate verifiable zero-knowledge and SHA-256 integrity proofs locally under GODSOURCEGLOBAL LLC governance.
-            </p>
+            
+            {activeTab === 'XHandleCoin' ? (
+              <div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.4rem', color: '#22d3ee' }}>
+                  X Handle Coin Launcher & Pot
+                </h2>
+                <p style={{ fontSize: '0.75rem', color: '#93c5fd', marginBottom: '1rem', lineHeight: '1.4' }}>
+                  Launch a coin for any X handle. Trades fund that handle's pot. Sign in with X to claim it or route it as X Money.
+                </p>
 
-            {/* File Input Zone */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 'bold', color: '#fbbf24', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Target Compliance Document:
-              </label>
-              <input 
-                type="file" 
-                onChange={handleFileChange}
-                style={{ 
-                  width: '100%', 
-                  fontSize: '0.75rem', 
-                  color: '#e2e8f0', 
-                  backgroundColor: '#040814', 
-                  border: '1px solid rgba(251, 191, 36, 0.5)', 
-                  borderRadius: '10px', 
-                  padding: '0.5rem' 
-                }}
-              />
-            </div>
+                {/* Launch Form */}
+                <form onSubmit={handleLaunchCoin} style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="@XHandle"
+                    value={targetHandle}
+                    onChange={(e) => setTargetHandle(e.target.value)}
+                    style={{ 
+                      flex: 1, 
+                      fontSize: '0.75rem', 
+                      color: '#e2e8f0', 
+                      backgroundColor: '#040814', 
+                      border: '1px solid rgba(251, 191, 36, 0.5)', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem' 
+                    }}
+                  />
+                  <button 
+                    type="submit"
+                    style={{ 
+                      padding: '0.5rem 1rem', 
+                      background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', 
+                      color: '#040814', 
+                      fontWeight: '800', 
+                      borderRadius: '8px', 
+                      border: 'none', 
+                      cursor: 'pointer', 
+                      fontSize: '0.75rem' 
+                    }}
+                  >
+                    Launch Coin
+                  </button>
+                </form>
 
-            {/* Action Button */}
-            <button 
-              onClick={handleAnchorProof}
-              style={{ 
-                width: '100%', 
-                padding: '0.85rem', 
-                background: 'linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)', 
-                color: '#040814', 
-                fontWeight: '900', 
-                borderRadius: '12px', 
-                border: 'none', 
-                cursor: 'pointer', 
-                fontSize: '0.9rem', 
-                boxShadow: '0 0 20px rgba(34, 211, 238, 0.5)',
-                textTransform: 'uppercase',
-                letterSpacing: '1px'
-              }}
-            >
-              Anchor {activeTab} Proof On-Chain
-            </button>
+                {/* Active Pots List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {launchedCoins.map((item, idx) => (
+                    <div key={idx} style={{ 
+                      background: 'rgba(4, 8, 20, 0.8)', 
+                      border: '1px solid rgba(34, 211, 238, 0.3)', 
+                      borderRadius: '8px', 
+                      padding: '0.75rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fbbf24' }}>{item.handle}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#22d3ee' }}>Pot: {item.pot}</div>
+                      </div>
+                      <button 
+                        onClick={() => handleClaimPot(item.handle)}
+                        style={{ 
+                          padding: '0.35rem 0.75rem', 
+                          background: '#22d3ee', 
+                          color: '#040814', 
+                          fontWeight: 'bold', 
+                          borderRadius: '6px', 
+                          border: 'none', 
+                          fontSize: '0.65rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Claim / X Money
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.4rem', color: '#22d3ee', textTransform: 'capitalize' }}>
+                  {activeTab} Protocol Core
+                </h2>
+                <p style={{ fontSize: '0.75rem', color: '#93c5fd', marginBottom: '1rem', lineHeight: '1.4' }}>
+                  Generate verifiable cryptographic proofs under GODSOURCEGLOBAL LLC governance.
+                </p>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 'bold', color: '#fbbf24', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+                    Target Compliance Document:
+                  </label>
+                  <input 
+                    type="file" 
+                    onChange={handleFileChange}
+                    style={{ 
+                      width: '100%', 
+                      fontSize: '0.75rem', 
+                      color: '#e2e8f0', 
+                      backgroundColor: '#040814', 
+                      border: '1px solid rgba(251, 191, 36, 0.5)', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem' 
+                    }}
+                  />
+                </div>
+
+                <button 
+                  onClick={handleAnchorProof}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    background: 'linear-gradient(135deg, #22d3ee 0%, #0891b2 100%)', 
+                    color: '#040814', 
+                    fontWeight: '900', 
+                    borderRadius: '10px', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    fontSize: '0.85rem', 
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  Anchor {activeTab} Proof On-Chain
+                </button>
+              </div>
+            )}
 
             {/* Status Feedback Box */}
             {statusMessage && (
               <div style={{ 
                 marginTop: '1rem', 
-                padding: '0.75rem', 
+                padding: '0.65rem', 
                 backgroundColor: '#040814', 
                 border: '1px solid #22d3ee', 
-                borderRadius: '8px', 
-                fontSize: '0.7rem', 
+                borderRadius: '6px', 
+                fontSize: '0.65rem', 
                 fontFamily: 'monospace', 
                 color: '#22d3ee', 
                 wordBreak: 'break-all' 
@@ -214,12 +298,12 @@ export default function App() {
 
           {/* Corporate Footer */}
           <div style={{ 
-            marginTop: '1.5rem', 
-            paddingTop: '1rem', 
+            marginTop: '1.25rem', 
+            paddingTop: '0.85rem', 
             borderTop: '1px solid rgba(251, 191, 36, 0.2)', 
             textAlign: 'center', 
             color: '#64748b', 
-            fontSize: '0.7rem', 
+            fontSize: '0.65rem', 
             fontFamily: 'monospace' 
           }}>
             <p style={{ margin: '0 0 2px 0', color: '#fbbf24' }}>GODSOURCEGLOBAL LLC &copy; 2026</p>
