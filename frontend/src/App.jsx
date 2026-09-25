@@ -25,6 +25,8 @@ export default function App() {
   const [signerName, setSignerName] = useState('');
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
   const [tipAmount, setTipAmount] = useState('0.01');
+  const [xHandle, setXHandle] = useState('RichardDimassa');
+  const [isEditingHandle, setIsEditingHandle] = useState(false);
 
   const verticals = ['Notary', 'SignAndSeal', 'Taxes', 'Insurance', 'BailBonds', 'XHandleCoin'];
 
@@ -34,7 +36,6 @@ export default function App() {
         setStatusMessage('Requesting ApeChain connection...');
         const p = new ethers.BrowserProvider(window.ethereum);
         
-        // Switch or add ApeChain
         try {
           await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
@@ -80,7 +81,7 @@ export default function App() {
       const pdfDoc = await PDFDocument.load(buf);
       const font = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
       const page = pdfDoc.getPages()[pdfDoc.getPages().length - 1];
-      page.drawText('DIGITALLY SIGNED & SEALED BY: ' + signerName, { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
+      page.drawText('DIGITALLY SIGNED & SEALED BY: ' + signerName + ' (/@' + xHandle + ')', { x: 50, y: 60, size: 10, font, color: rgb(0.02, 0.11, 0.24) });
       page.drawText('GODSOURCEGLOBAL LLC | ' + new Date().toUTCString(), { x: 50, y: 45, size: 8, font, color: rgb(0.13, 0.55, 0.75) });
       const bytes = await pdfDoc.save();
       setSignedPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
@@ -89,17 +90,15 @@ export default function App() {
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
       
       if (!signer) {
-        setStatusMessage('Signed successfully (Simulation Hash: ' + hashHex.substring(0, 18) + '...)');
+        setStatusMessage('Signed successfully for @' + xHandle + ' (Simulation Hash: ' + hashHex.substring(0, 18) + '...)');
         return;
       }
 
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const valueToSend = ethers.parseEther(tipAmount || '0');
-      
-      // Send optional tip/fee to treasury alongside contract call
       const tx = await contract.anchorProof(hashHex, 'SignAndSeal', { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Success! Sealed, anchored on ApeChain, and tip routed to vault.');
+      setStatusMessage('Success! Sealed, anchored on ApeChain for @' + xHandle + ', and tip routed.');
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -109,13 +108,13 @@ export default function App() {
       const buf = await selectedFile.arrayBuffer();
       const hashBuf = await crypto.subtle.digest('SHA-256', buf);
       const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (!signer) { setStatusMessage('Proof Hash: ' + hashHex.substring(0, 18) + '... (Simulated)'); return; }
+      if (!signer) { setStatusMessage('Proof Hash for @' + xHandle + ': ' + hashHex.substring(0, 18) + '... (Simulated)'); return; }
       
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
       const valueToSend = ethers.parseEther(tipAmount || '0');
-      const tx = await contract.anchorProof(hashHex, activeTab, { value: valueToSend });
+      const tx = await contract.anchorProof(hashHex, activeTab + ':' + xHandle, { value: valueToSend });
       await tx.wait();
-      setStatusMessage('Proof anchored successfully on ApeChain with fee routed!');
+      setStatusMessage('Proof anchored successfully on ApeChain for @' + xHandle + '!');
     } catch (err) { setStatusMessage('Error: ' + err.message); }
   };
 
@@ -123,11 +122,25 @@ export default function App() {
     <div style={{ backgroundColor: '#040814', color: '#f3f4f6', minHeight: '100vh', padding: '1rem', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         
-        {/* Identity & Vault Link Card */}
+        {/* Dynamic Identity & Vault Link Card */}
         <div style={{ background: '#09152d', padding: '1rem', borderRadius: '16px', border: '1px solid #fbbf24', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#fbbf24', letterSpacing: '0.05em' }}>IDENTITY & VAULT LINK</div>
-            <div style={{ fontSize: '0.9rem', color: '#22d3ee', fontWeight: 'bold', marginTop: '0.2rem' }}>@RichardDimassa</div>
+            <div style={{ fontSize: '0.70rem', fontWeight: 'bold', color: '#fbbf24', letterSpacing: '0.05em' }}>X HANDLE & VAULT LINK</div>
+            {isEditingHandle ? (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
+                <input 
+                  type="text" 
+                  value={xHandle} 
+                  onChange={e => setXHandle(e.target.value.replace('@',''))} 
+                  style={{ background: '#040814', color: '#22d3ee', border: '1px solid #22d3ee', borderRadius: '4px', padding: '0.2rem 0.4rem', fontSize: '0.8rem', width: '120px' }} 
+                />
+                <button onClick={() => setIsEditingHandle(false)} style={{ background: '#fbbf24', color: '#040814', border: 'none', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold' }}>Set</button>
+              </div>
+            ) : (
+              <div onClick={() => setIsEditingHandle(true)} style={{ fontSize: '0.9rem', color: '#22d3ee', fontWeight: 'bold', marginTop: '0.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                @{xHandle} <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>(Click to change)</span>
+              </div>
+            )}
           </div>
           <div style={{ background: '#22d3ee', color: '#040814', padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }}>VERIFIED</div>
         </div>
@@ -169,7 +182,7 @@ export default function App() {
             </div>
           )}
 
-          {statusMessage && <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#040814', color: '#22d3ee', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>{statusMessage}</div>}
+          {statusMessage && <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#040814', color: '#22d3ee', fontSize: '0.7rem', fontFamily: 'monospace', wordBreak: 'break-all'}>{statusMessage}</div>}
         </div>
 
       </div>
