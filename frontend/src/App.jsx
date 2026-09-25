@@ -400,3 +400,46 @@ export default function App() {
     </div>
   );
 }
+
+                />
+              )}
+            </div>
+          )}
+
+          {/* Status Feedback Box */}
+          {statusMessage && (
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '0.65rem', 
+              backgroundColor: '#040814', 
+              border: '1px solid #22d3ee', 
+              borderRadius: '6px', 
+              fontSize: '0.65rem', 
+              fontFamily: 'monospace', 
+              color: '#22d3ee', 
+              wordBreak: 'break-all' 
+            }}>
+              [GSG_STATUS]: {statusMessage}
+            </div>
+          )}
+        </div>
+
+        {/* Corporate Footer */}
+        <div style={{ 
+          marginTop: '1.25rem', 
+          paddingTop: '0.85rem', 
+          borderTop: '1px solid rgba(251, 191, 36, 0.2)', 
+          textAlign: 'center', 
+          color: '#64748b', 
+          fontSize: '0.65rem', 
+          fontFamily: 'monospace' 
+        }}>
+          <p style={{ margin: '0 0 2px 0', color: '#fbbf24' }}>GODSOURCEGLOBAL LLC &copy; 2026</p>
+          <p style={{ margin: 0, color: '#22d3ee' }}>Founder, CEO & Lead Systems Architect</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+);
+}
