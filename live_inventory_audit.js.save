@@ -1,8 +1,8 @@
-const { ethers } = require("ethers");
+0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074const { ethers } = require("ethers");
 
 // Replace with your actual PUBLIC wallet address (42 characters starting with 0x)
 const TARGET_WALLETS = [
-  "0x96E50F5a76743BBe18E8Fe2B11B19897A5d0A074"
+  "0xYourActualPublicWalletAddressHere"
 ];
 
 // Open public RPC endpoints that do not require an API key

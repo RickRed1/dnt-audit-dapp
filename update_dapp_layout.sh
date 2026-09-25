@@ -1,3 +1,44 @@
+#!/bin/bash
+
+# Ensure components directory exists
+mkdir -p frontend/src/components
+
+# 1. Re-verify SocialAuth.jsx component creation
+cat << 'COMPONENT_EOF' > frontend/src/components/SocialAuth.jsx
+import React, { useState } from 'react';
+
+export default function SocialAuth({ onAuthenticate }) {
+  const [handle, setHandle] = useState(null);
+
+  const handleTwitterLogin = () => {
+    const mockHandle = "@GodSourceGlobal"; 
+    setHandle(mockHandle);
+    onAuthenticate(mockHandle);
+  };
+
+  return (
+    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-white mb-6">
+      <h3 className="text-lg font-semibold mb-2">Handle & Wallet Identity</h3>
+      {handle ? (
+        <div className="flex items-center justify-between">
+          <span className="text-green-400 font-mono">Linked: {handle}</span>
+          <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-1 rounded">Verified</span>
+        </div>
+      ) : (
+        <button 
+          onClick={handleTwitterLogin}
+          className="w-full py-2 bg-black hover:bg-zinc-800 border border-zinc-700 rounded-lg font-medium transition"
+        >
+          Sign in with X to Link Handle
+        </button>
+      )}
+    </div>
+  );
+}
+COMPONENT_EOF
+
+# 2. Overwrite frontend/src/App.jsx with the multi-vertical layout and SocialAuth integration
+cat << 'APP_EOF' > frontend/src/App.jsx
 import React, { useState } from 'react';
 import SocialAuth from './components/SocialAuth';
 
@@ -85,3 +126,6 @@ export default function App() {
     </div>
   );
 }
+APP_EOF
+
+echo "[+] App.jsx successfully updated with multi-vertical tabs and SocialAuth!"
