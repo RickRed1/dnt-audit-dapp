@@ -17,6 +17,41 @@ const NETWORKS = {
 };
 
 export default function App() {
+  async function connectPolygonWallet() {
+    if (typeof window.ethereum === 'undefined') {
+      alert("Please install MetaMask or a Web3 mobile browser extension.");
+      return;
+    }
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const network = await provider.getNetwork();
+      
+      if (network.chainId !== 137) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x89' }], // 137 in hex
+          });
+        } catch (switchError) {
+          alert("Please manually switch your wallet network to Polygon Mainnet (Chain ID 137).");
+          return;
+        }
+      }
+
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      const balanceWei = await provider.getBalance(address);
+      const balancePol = ethers.utils.formatEther(balanceWei);
+
+      console.log("Connected Address:", address);
+      console.log("Polygon POL Balance:", balancePol);
+      
+    } catch (err) {
+      console.error("Wallet connection failed:", err);
+    }
+  }
+
   const [activeTab, setActiveTab] = useState('Notary');
   const [claimView, setClaimView] = useState(false);
   const [xSignedIn, setXSignedIn] = useState(false);
