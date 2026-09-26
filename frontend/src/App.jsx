@@ -17,13 +17,36 @@ const NETWORKS = {
 };
 
 export default function App() {
+  const [fileHash, setFileHash] = React.useState("");
+  const [fileName, setFileName] = React.useState("");
+  const [isHashing, setIsHashing] = React.useState(false);
+
+  async function handleFileHash(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    setIsHashing(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      setFileHash('0x' + hashHex);
+    } catch (err) {
+      console.error("Hashing failed:", err);
+      alert("Failed to hash document.");
+    } finally {
+      setIsHashing(false);
+    }
+  }
+
   async function connectPolygonWallet() {
     if (typeof window.ethereum === 'undefined') {
       alert("Please install MetaMask or a Web3 mobile browser extension.");
       return;
     }
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       const network = await provider.getNetwork();
       
@@ -42,7 +65,7 @@ export default function App() {
       const signer = provider.getSigner();
       const address = await signer.getAddress();
       const balanceWei = await provider.getBalance(address);
-      const balancePol = ethers.utils.formatEther(balanceWei);
+      const balancePol = ethers.formatEther(balanceWei);
 
       console.log("Connected Address:", address);
       console.log("Polygon POL Balance:", balancePol);
