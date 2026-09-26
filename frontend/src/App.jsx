@@ -414,6 +414,40 @@ export default function App() {
         )}
       </div>
 
+
+      {/* GODSOURCEGLOBAL Sovereign Whitepaper & Architecture Docs */}
+      <div style={{ background: '#0a0f1d', border: '2px solid #3b82f6', borderRadius: '8px', padding: '1.2rem', margin: '1rem 0', color: '#fff', textAlign: 'left' }}>
+        <h3 style={{ color: '#3b82f6', marginBottom: '0.4rem', fontSize: '1.0rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          📜 Sovereign Whitepaper & System Architecture
+        </h3>
+        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '1rem' }}>
+          Technical specification and compliance framework for GODSOURCEGLOBAL decentralized sovereign financial infrastructure on Polygon (Chain ID 137).
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.75rem' }} id="docs">
+          <div style={{ background: '#111827', padding: '0.8rem', borderRadius: '6px', border: '1px solid #1f2937' }}>
+            <strong style={{ color: '#eab308' }}>1. Gold Union Asset-Backed Bridge</strong>
+            <p style={{ color: '#9ca3af', marginTop: '0.3rem', lineHeight: '1.4' }}>
+              Bridges physical precious metals (gold jewelry, bullion, coins, watches) from storefront appraisal (Torrance, CA operations) into verifiable on-chain collateral representations.
+            </p>
+          </div>
+
+          <div style={{ background: '#111827', padding: '0.8rem', borderRadius: '6px', border: '1px solid #1f2937' }}>
+            <strong style={{ color: '#10b981' }}>2. Bail Bond LTV Underwriting Engine</strong>
+            <p style={{ color: '#9ca3af', marginTop: '0.3rem', lineHeight: '1.4' }}>
+              Automatically calculates a conservative 70% Loan-to-Value (LTV) credit limit against appraised physical melt values to back surety and bail bond underwriting protocols.
+            </p>
+          </div>
+
+          <div style={{ background: '#111827', padding: '0.8rem', borderRadius: '6px', border: '1px solid #1f2937' }}>
+            <strong style={{ color: '#3b82f6' }}>3. EIP-2535 Diamond Proxy Architecture</strong>
+            <p style={{ color: '#9ca3af', marginTop: '0.3rem', lineHeight: '1.4' }}>
+              Employs a modular multi-facet proxy pattern allowing seamless upgrades across Notary, Tax-as-a-Service, and Vault modules without breaking state or proxy routing.
+            </p>
+          </div>
+        </div>
+      </div>
+
 </div>
   );
 }
