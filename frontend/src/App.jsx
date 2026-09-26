@@ -130,7 +130,7 @@ export default function App() {
         
         <div style={{ textAlign: 'center', padding: '0.5rem 0', borderBottom: '2px solid #ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
           <div className="waving-flag" style={{ width: '120px', height: '75px', borderRadius: '6px', overflow: 'hidden', border: '2px solid #dc2626', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)' }}>
-            <img src="data:image/jpeg;base64,NDA0OiBOb3QgRm91bmQ=" alt="USA Flag" style={ width: "100%", height: "100%", objectFit: "cover" } />
+            <img src="data:image/jpeg;base64,NDA0OiBOb3QgRm91bmQ=" alt="USA Flag" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#dc2626', letterSpacing: '0.15em' }}>1776 - 2026 SOVEREIGN FRAMEWORK</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffffff', letterSpacing: '0.1em' }}>GODSOURCEGLOBAL VAULT</div>
