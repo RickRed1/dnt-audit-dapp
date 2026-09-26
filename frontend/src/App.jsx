@@ -17,6 +17,28 @@ const NETWORKS = {
 };
 
 export default function App() {
+  const [goldAssetType, setGoldAssetType] = React.useState("GoldJewelry");
+  const [goldKarat, setGoldKarat] = React.useState("14");
+  const [goldWeight, setGoldWeight] = React.useState("");
+  const [spotPrice, setSpotPrice] = React.useState("75.00");
+  const [appraisedValue, setAppraisedValue] = React.useState(null);
+  const [bailCreditLimit, setBailCreditLimit] = React.useState(null);
+
+  function calculateGoldAppraisal(e) {
+    e.preventDefault();
+    const weight = parseFloat(goldWeight);
+    const spot = parseFloat(spotPrice);
+    const karat = parseFloat(goldKarat);
+    if (isNaN(weight) || weight <= 0) {
+      alert("Please enter a valid weight in grams.");
+      return;
+    }
+    const purityFactor = karat / 24.0;
+    const totalVal = weight * spot * purityFactor;
+    setAppraisedValue(totalVal.toFixed(2));
+    setBailCreditLimit((totalVal * 0.70).toFixed(2));
+  }
+
   const [fileHash, setFileHash] = React.useState("");
   const [fileName, setFileName] = React.useState("");
   const [isHashing, setIsHashing] = React.useState(false);
@@ -316,6 +338,82 @@ export default function App() {
         <button onClick={() => setActiveTab('SignAndSeal')} style={{ background: 'none', border: 'none', color: activeTab === 'SignAndSeal' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>🚀</span> Launch</button>
         <button onClick={() => setActiveTab('Docs')} style={{ background: 'none', border: 'none', color: activeTab === 'Docs' ? '#dc2626' : '#ffffff', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}><span>📄</span> Docs</button>
       </div>
-    </div>
+    
+      {/* Gold Union Vault & Bail Loan Underwriter */}
+      <div style={{ background: '#0a0f1d', border: '2px solid #eab308', borderRadius: '8px', padding: '1.2rem', margin: '1rem 0', color: '#fff', textAlign: 'left' }}>
+        <h3 style={{ color: '#eab308', marginBottom: '0.4rem', fontSize: '1.0rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          🪙 Gold Union Vault & Bail Loan Underwriter
+        </h3>
+        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '1rem' }}>
+          Appraise physical gold, silver, watches, or bullion at real-time market spot prices and instantly unlock 70% LTV credit for Bail Bond underwriting.
+        </p>
+
+        <form onSubmit={calculateGoldAppraisal} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#eab308', display: 'block', marginBottom: '0.3rem' }}>ASSET CATEGORY:</label>
+            <select 
+              value={goldAssetType} 
+              onChange={(e) => setGoldAssetType(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', background: '#111827', color: '#fff', border: '1px solid #374151', borderRadius: '4px', fontSize: '0.8rem' }}
+            >
+              <option value="GoldJewelry">Gold Jewelry / Broken Gold</option>
+              <option value="GoldAndSilverCoins">Gold & Silver Coins</option>
+              <option value="Watches">Luxury Watches</option>
+              <option value="SilverAndPlatinum">Silver & Platinum</option>
+              <option value="Bullion">Bullion (At Market Price)</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.75rem', color: '#eab308', display: 'block', marginBottom: '0.3rem' }}>PURITY (KARAT):</label>
+              <select 
+                value={goldKarat} 
+                onChange={(e) => setGoldKarat(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', background: '#111827', color: '#fff', border: '1px solid #374151', borderRadius: '4px', fontSize: '0.8rem' }}
+              >
+                <option value="24">24K (Pure Bullion)</option>
+                <option value="22">22K</option>
+                <option value="18">18K</option>
+                <option value="14">14K (Standard Jewelry)</option>
+                <option value="10">10K</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.75rem', color: '#eab308', display: 'block', marginBottom: '0.3rem' }}>WEIGHT (GRAMS):</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                placeholder="e.g. 50.0" 
+                value={goldWeight}
+                onChange={(e) => setGoldWeight(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', background: '#111827', color: '#fff', border: '1px solid #374151', borderRadius: '4px', fontSize: '0.8rem', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            style={{ background: '#eab308', color: '#000', fontWeight: 'bold', padding: '0.6rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}
+          >
+            Appraise & Unlock Bail Loan Credit
+          </button>
+        </form>
+
+        {appraisedValue && (
+          <div style={{ marginTop: '1rem', background: '#111827', padding: '0.8rem', borderRadius: '6px', border: '1px solid #eab308' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Appraised Melt Value:</span>
+              <span style={{ fontSize: '0.85rem', color: '#eab308', fontWeight: 'bold' }}>${appraisedValue} USD</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Bail Bond Loan Limit (70% LTV):</span>
+              <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 'bold' }}>${bailCreditLimit} USD</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+</div>
   );
 }
