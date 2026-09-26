@@ -218,7 +218,7 @@ export default function App() {
 
         {activeTab === 'Docs' ? (
           <div style={{ background: '#071326', padding: '1.5rem', borderRadius: '16px', border: '2px solid #dc2626', lineHeight: '1.5' }}>
-            <h2 style={{ color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>GODSOURCEGLOBAL VAULT WHITEPAPER</h2>
+            <h2 style={{ color: '#dc2626', fontSize: '1.1rem', marginBottom: '0.5rem' }}>GODSOURCEGLOBAL VAULT & GOLD UNION WHITEPAPER</h2>
             <div style={{ fontSize: '0.7rem', color: '#d1d5db', marginBottom: '1rem' }}>Framework Version: 1776-2026 Sovereign Edition</div>
             
             <h3 style={{ fontSize: '0.9rem', color: '#ffffff', marginTop: '1rem' }}>1. Executive Summary</h3>
